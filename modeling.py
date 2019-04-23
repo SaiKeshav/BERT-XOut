@@ -26,6 +26,7 @@ import re
 import numpy as np
 import six
 import tensorflow as tf
+import os
 
 
 class BertConfig(object):
