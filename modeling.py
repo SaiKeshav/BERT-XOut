@@ -28,6 +28,8 @@ import six
 import tensorflow as tf
 import os
 import sys
+tf.logging.set_verbosity(tf.logging.INFO)
+
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
