@@ -27,6 +27,7 @@ import numpy as np
 import six
 import tensorflow as tf
 import os
+import sys
 
 
 class BertConfig(object):
@@ -704,7 +705,7 @@ def attention_layer(from_tensor,
   attention_scores = tf.multiply(attention_scores,
                                  1.0 / math.sqrt(float(size_per_head)))
   if(last_layer == True):
-    tf.print(tf.shape(attention_scores))
+    tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
 
   if attention_mask is not None:
     # `attention_mask` = [B, 1, F, T]
