@@ -660,9 +660,6 @@ def attention_layer(from_tensor,
   #   T = `to_tensor` sequence length
   #   N = `num_attention_heads`
   #   H = `size_per_head`
-  print(last_layer)
-  if(last_layer == True):
-    print('Reached last layer')
 
   from_tensor_2d = reshape_to_matrix(from_tensor)
   to_tensor_2d = reshape_to_matrix(to_tensor)
@@ -706,6 +703,8 @@ def attention_layer(from_tensor,
   attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
   attention_scores = tf.multiply(attention_scores,
                                  1.0 / math.sqrt(float(size_per_head)))
+  if(last_layer == True):
+    tf.print(tf.shape(attention_scores))
 
   if attention_mask is not None:
     # `attention_mask` = [B, 1, F, T]
