@@ -707,7 +707,7 @@ def attention_layer(from_tensor,
                                  1.0 / math.sqrt(float(size_per_head)))
 
   # attention_scores = tf.Print(attention_scores, [attention_scores], output_stream='file:///content/bert_repo/tmp.txt')
-  print_op = tf.print('hello')
+  print_op = tf.print('hello', output_stream=sys.stderr)
   # tf.contrib.eager.py_func(func=my_print, inp=[attention_scores], Tout=[])
   # if(last_layer == True):
     # tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
