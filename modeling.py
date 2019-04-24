@@ -28,8 +28,8 @@ import six
 import tensorflow as tf
 import os
 import sys
-tf.logging.set_verbosity(tf.logging.INFO)
 
+att_type = None
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
@@ -705,6 +705,9 @@ def attention_layer(from_tensor,
   # attention scores.
   # `attention_scores` = [B, N, F, T]
   attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
+
+  global att_type
+  print(att_type)
   print_op = tf.print(tf.shape(attention_scores))
   with tf.control_dependencies([print_op]):
     attention_scores = tf.multiply(attention_scores,

@@ -124,6 +124,9 @@ flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
+flags.DEFINE_integer(
+    "att_type", 0,
+    "The attention type used")
 
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
@@ -783,6 +786,8 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
+
+  modeling.att_type = FLAGS.att_type
 
   processors = {
       "cola": ColaProcessor,
