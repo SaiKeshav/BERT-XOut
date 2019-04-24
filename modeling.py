@@ -706,7 +706,7 @@ def attention_layer(from_tensor,
                                  1.0 / math.sqrt(float(size_per_head)))
 
   # tf.logging.set_verbosity(tf.logging.INFO)
-  tf.print(tf.shape(attention_scores), output_stream=sys.stderr)
+  tf.print(tf.shape(attention_scores), output_stream=open('/content/tmp','w'))
   if(last_layer == True):
     tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
 
