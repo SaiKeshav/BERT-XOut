@@ -28,6 +28,7 @@ import six
 import tensorflow as tf
 import os
 import sys
+tf.enable_eager_execution()
 
 
 class BertConfig(object):
@@ -706,7 +707,7 @@ def attention_layer(from_tensor,
                                  1.0 / math.sqrt(float(size_per_head)))
 
   # tf.logging.set_verbosity(tf.logging.INFO)
-  tf.print(tf.shape(attention_scores), output_stream=open('/content/tmp','w'))
+  tf.print(tf.shape(attention_scores), output_stream=open('file:///content/tmp.txt','a'))
   if(last_layer == True):
     tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
 
