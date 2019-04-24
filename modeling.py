@@ -238,7 +238,10 @@ class BertModel(object):
     if(att_type == 0):
       return self.pooled_output
     else:
-      return pool(self.sequence_output, -2, att_type)
+      print_op = tf.print(tf.shape(self.sequence_output))
+      with tf.control_dependencies([print_op]):
+        pres = pool(self.sequence_output, -2, att_type)
+      return pres
 
   def get_sequence_output(self):
     """Gets final hidden layer of encoder.
