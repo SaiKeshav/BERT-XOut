@@ -748,7 +748,7 @@ def attention_layer(from_tensor,
   value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
 
   global att_type
-  print_op = None
+  print_op = tf.print(tf.shape(value_layer))
   if(att_type > 0 and last_layer):
     num_tokens = get_shape_list(value_layer)[2]
     new_value_layer = tf.expand_dims(value_layer, 3)
