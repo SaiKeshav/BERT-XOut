@@ -748,7 +748,7 @@ def attention_layer(from_tensor,
   
   # else:
   # `context_layer` = [B, N, F, H]
-  with tf.control_dependencies([print_op1]):
+  with tf.control_dependencies([print_op]):
     context_layer = tf.matmul(attention_probs, value_layer)
 
   # `context_layer` = [B, F, N, H]
