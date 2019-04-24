@@ -704,6 +704,7 @@ def attention_layer(from_tensor,
   attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
   attention_scores = tf.multiply(attention_scores,
                                  1.0 / math.sqrt(float(size_per_head)))
+  tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
   if(last_layer == True):
     tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
 
