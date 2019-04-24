@@ -706,11 +706,9 @@ def attention_layer(from_tensor,
   # `attention_scores` = [B, N, F, T]
   attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
 
-  global att_type
-  print(att_type)
-  print_op = tf.print(tf.shape(attention_scores))
-  with tf.control_dependencies([print_op]):
-    attention_scores = tf.multiply(attention_scores,
+  # print_op = tf.print(tf.shape(attention_scores))
+  # with tf.control_dependencies([print_op]):
+  attention_scores = tf.multiply(attention_scores,
                                    1.0 / math.sqrt(float(size_per_head)))
 
   if attention_mask is not None:
@@ -742,8 +740,18 @@ def attention_layer(from_tensor,
   # `value_layer` = [B, N, T, H]
   value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
 
+  global att_type
+  # if(att_type > 0 and last_layer):
+  num_tokens = tf.shape(value_layer)[2]
+  new_value_layer = tf.expand_dims(value_layer, -1)
+  multiply = tf.constant([1,1,1,num_tokens,1])
+  new_value_layer = tf.tile(new_value_layer, multiply)
+  print_op = tf.print(tf.shape(new_value_layer))
+  
+  # else:
   # `context_layer` = [B, N, F, H]
-  context_layer = tf.matmul(attention_probs, value_layer)
+  with tf.control_dependencies([print_op]):
+    context_layer = tf.matmul(attention_probs, value_layer)
 
   # `context_layer` = [B, F, N, H]
   context_layer = tf.transpose(context_layer, [0, 2, 1, 3])
