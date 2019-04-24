@@ -707,7 +707,7 @@ def attention_layer(from_tensor,
                                  1.0 / math.sqrt(float(size_per_head)))
 
   # attention_scores = tf.Print(attention_scores, [attention_scores], output_stream='file:///content/bert_repo/tmp.txt')
-  attention_scores = tf.Print(attention_scores, [attention_scores], message='attention_scores: ')
+  print_op = tf.print(attention_scores)
   # tf.contrib.eager.py_func(func=my_print, inp=[attention_scores], Tout=[])
   # if(last_layer == True):
     # tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
@@ -727,7 +727,8 @@ def attention_layer(from_tensor,
 
   # Normalize the attention scores to probabilities.
   # `attention_probs` = [B, N, F, T]
-  attention_probs = tf.nn.softmax(attention_scores)
+  with tf.control_dependencies([print_op]):
+    attention_probs = tf.nn.softmax(attention_scores)
 
   # This is actually dropping out entire tokens to attend to, which might
   # seem a bit unusual, but is taken from the original Transformer paper.
