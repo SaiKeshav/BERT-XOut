@@ -705,7 +705,7 @@ def attention_layer(from_tensor,
   # attention scores.
   # `attention_scores` = [B, N, F, T]
   attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
-  print_op = tf.print('hello')
+  print_op = tf.print(tf.shape(attention_scores))
   with tf.control_dependencies([print_op]):
     attention_scores = tf.multiply(attention_scores,
                                    1.0 / math.sqrt(float(size_per_head)))
