@@ -334,7 +334,7 @@ class QnliProcessor(DataProcessor):
         label = tokenization.convert_to_unicode(line[-1])
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return example
+    return examples
 
 class MrpcProcessor(DataProcessor):
   """Processor for the MRPC data set (GLUE version)."""
