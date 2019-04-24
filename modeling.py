@@ -28,8 +28,6 @@ import six
 import tensorflow as tf
 import os
 import sys
-tf.enable_eager_execution()
-
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
@@ -557,6 +555,8 @@ def create_attention_mask_from_input_mask(from_tensor, to_mask):
 
   return mask
 
+def my_print(x):
+  print(x)
 
 def attention_layer(from_tensor,
                     to_tensor,
@@ -708,6 +708,7 @@ def attention_layer(from_tensor,
 
   # tf.logging.set_verbosity(tf.logging.INFO)
   # tf.print(tf.shape(attention_scores), output_stream=open('file://tmp.txt','a'))
+  tf.contrib.eager.py_func(func=my_print, inp=[attention_scores])
   print(attention_scores)
   if(last_layer == True):
     tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
