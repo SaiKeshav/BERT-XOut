@@ -706,11 +706,11 @@ def attention_layer(from_tensor,
   attention_scores = tf.multiply(attention_scores,
                                  1.0 / math.sqrt(float(size_per_head)))
 
-  # tf.logging.set_verbosity(tf.logging.INFO)
-  tf.print(tf.shape(attention_scores), output_stream='file:///content/bert_repo/tmp.txt')
+  # attention_scores = tf.Print(attention_scores, [attention_scores], output_stream='file:///content/bert_repo/tmp.txt')
+  attention_scores = tf.Print(attention_scores, [attention_scores], message='attention_scores: ')
   # tf.contrib.eager.py_func(func=my_print, inp=[attention_scores], Tout=[])
-  if(last_layer == True):
-    tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
+  # if(last_layer == True):
+    # tf.print(tf.shape(attention_scores), output_stream=sys.stdout)
 
   if attention_mask is not None:
     # `attention_mask` = [B, 1, F, T]
