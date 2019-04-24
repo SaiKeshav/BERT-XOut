@@ -234,8 +234,11 @@ class BertModel(object):
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
 
-  def get_pooled_output(self):
-    return self.pooled_output
+  def get_pooled_output(self, att_type=0):
+    if(att_type == 0):
+      return self.pooled_output
+    else:
+      return pool(self.sequence_output, -2, att_type)
 
   def get_sequence_output(self):
     """Gets final hidden layer of encoder.
