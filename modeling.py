@@ -660,10 +660,10 @@ def attention_layer(from_tensor,
   #   T = `to_tensor` sequence length
   #   N = `num_attention_heads`
   #   H = `size_per_head`
-  if(last_layer == True):
-    print('Reached last layer')
+  # if(last_layer == True):
+  #   print('Reached last layer')
 
-  from_tensor_2d = reshape_to_matrix(from_tensor)
+  # from_tensor_2d = reshape_to_matrix(from_tensor)
   to_tensor_2d = reshape_to_matrix(to_tensor)
 
   # `query_layer` = [B*F, N*H]
