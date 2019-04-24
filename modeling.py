@@ -748,7 +748,7 @@ def attention_layer(from_tensor,
   value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
 
   global att_type
-  print_op = tf.print(tf.shape(value_layer))
+  # print_op = tf.print(tf.shape(value_layer))
   if(att_type > 0 and last_layer):
     num_tokens = get_shape_list(value_layer)[2]
     new_value_layer = tf.expand_dims(value_layer, 3)
@@ -756,7 +756,6 @@ def attention_layer(from_tensor,
     new_value_layer = tf.tile(new_value_layer, multiply)
     attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
     context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 2, att_type)
-    print_op = tf.print(tf.shape(context_layer))
   else:
   # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
