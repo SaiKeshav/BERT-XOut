@@ -761,8 +761,8 @@ def attention_layer(from_tensor,
     context_layer = tf.matmul(attention_probs, value_layer)
 
   # `context_layer` = [B, F, N, H]
-  with tf.control_dependencies([print_op]):
-    context_layer = tf.transpose(context_layer, [0, 2, 1, 3])
+  # with tf.control_dependencies([print_op]):
+  context_layer = tf.transpose(context_layer, [0, 2, 1, 3])
 
   if do_return_2d_tensor:
     # `context_layer` = [B*F, N*H]
