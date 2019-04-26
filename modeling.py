@@ -244,7 +244,7 @@ class BertModel(object):
           embs = [pool(self.sequence_output, 1, att_type)]
           for i in range(heads):
             ## QuickHack: Use the swish activation
-            out = tf.layers.dense(self.sequence_output, middle_dim, activation=tf.tanh kernel_initializer=create_initializer(config.initializer_range))
+            out = tf.layers.dense(self.sequence_output, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
             # out = self.swish(out)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
             embs.append(pool(out, 1, att_type))  
