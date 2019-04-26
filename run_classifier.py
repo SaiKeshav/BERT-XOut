@@ -255,7 +255,6 @@ class XnliProcessor(DataProcessor):
     """See base class."""
     return ["contradiction", "entailment", "neutral"]
 
-
 class MnliMProcessor(DataProcessor):
   """Processor for the MultiNLI data set (GLUE version)."""
 
@@ -529,7 +528,7 @@ class RTEProcessor(DataProcessor):
       text_a = tokenization.convert_to_unicode(line[1])
       text_b = tokenization.convert_to_unicode(line[2])
       if set_type == "test":
-        label = "0"
+        label = "entailment"
       else:
         label = tokenization.convert_to_unicode(line[-1])
       examples.append(
@@ -574,7 +573,6 @@ class MrpcProcessor(DataProcessor):
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
-
 
 class ColaProcessor(DataProcessor):
   """Processor for the CoLA data set (GLUE version)."""
