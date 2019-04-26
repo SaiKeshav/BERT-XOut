@@ -240,8 +240,8 @@ class BertModel(object):
         global heads, middle_dim, final_dim
         for i in range(heads):
           ## QuickHack: Use the swish activation
-          self.Mw.add(tf.keras.layers.Dense(config.hidden_size, middle_dim, activation='tanh', kernel_initializer=create_initializer(config.initializer_range)))
-          self.Mw.add(tf.keras.layers.Dense(middle_dim, final_dim, activation='tanh'))
+          self.Mw.add(tf.keras.layers.Dense(config.hidden_size, middle_dim, 'tanh', kernel_initializer=create_initializer(config.initializer_range)))
+          self.Mw.add(tf.keras.layers.Dense(middle_dim, final_dim, 'tanh'))
 
   def swish(x):
     return (tf.keras.backend.sigmoid(x) * x)
