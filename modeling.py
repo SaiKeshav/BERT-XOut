@@ -248,7 +248,6 @@ class BertModel(object):
     return (tf.keras.backend.sigmoid(x) * x)
 
   def get_pooled_output(self, att_type=0, heads=0):
-    global heads, middle_dim, final_dim
     if(att_type == 0):
       return self.pooled_output
     else:
