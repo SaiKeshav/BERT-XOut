@@ -77,7 +77,7 @@ flags.DEFINE_integer(
     "for multi-head")
 
 flags.DEFINE_integer(
-    "heads", 10,
+    "heads", 0,
     "for multi-head")
 
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
