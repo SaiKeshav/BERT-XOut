@@ -1183,10 +1183,10 @@ def main(_):
         seq_length=FLAGS.max_seq_length,
         is_training=True,
         drop_remainder=True)
-    # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-    with pipes() as (out, err):
-      estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-    print(err)  
+    estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+    # with pipes() as (out, err):
+      # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+    # print(err)  
 
   if FLAGS.do_eval:
     eval_examples = processor.get_dev_examples(FLAGS.data_dir)
