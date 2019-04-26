@@ -233,14 +233,30 @@ class BertModel(object):
             config.hidden_size,
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
+        self.Mw = tf.keras.Sequential()
+        for i in range(config.heads):
+          self.Mw.add(tf.keras.Dense(config.hidden_size, config.middle_dim, activation=self.swish, kernel_initializer=create_initializer(config.initializer_range)))
+          self.Mw.add(tf.keras.Dense(config.middle_dim, config.final_dim, activation='tanh'))
 
-  def get_pooled_output(self, att_type=0):
+  def swish(x):
+    return (tf.keras.backend.sigmoid(x) * x)
+
+  def get_pooled_output(self, att_type=0, heads=0):
     if(att_type == 0):
       return self.pooled_output
     else:
       # print_op = tf.print(tf.shape(self.sequence_output))
       # with tf.control_dependencies([print_op]):
-      pres = pool(self.sequence_output, 1, att_type)
+      if(heads == 0):
+        pres = pool(self.sequence_output, 1, att_type)
+      else:
+        embs = [pool(self.sequence_output, 1, att_type)]
+        for i in range(heads):
+          out = self.Mw(self.sequence_output)
+          emb = pool(out, 1, att_type)
+          embs.append(emb)
+        pres = tf.concat(embs, 1)  
+
       return pres
 
   def get_sequence_output(self):

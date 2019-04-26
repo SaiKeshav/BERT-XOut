@@ -68,6 +68,18 @@ flags.DEFINE_integer(
     "Sequences longer than this will be truncated, and sequences shorter "
     "than this will be padded.")
 
+flags.DEFINE_integer(
+    "middle_dim", 100,
+    "for multi-head")
+
+flags.DEFINE_integer(
+    "final_dim", 100,
+    "for multi-head")
+
+flags.DEFINE_integer(
+    "heads", 10,
+    "for multi-head")
+
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
