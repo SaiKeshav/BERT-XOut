@@ -258,7 +258,7 @@ class BertModel(object):
       else:
         embs = [pool(self.sequence_output, 1, att_type)]
         config = self.config
-        out = self.Mw(self.sequence_output)
+        out = self.Mw
         emb = pool(out, 1, att_type)
         embs.append(emb)
         # for i in range(heads):
