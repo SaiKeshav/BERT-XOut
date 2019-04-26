@@ -236,11 +236,11 @@ class BertModel(object):
             config.hidden_size,
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
-        self.Mw = tf.keras.Sequential()
-        global heads, middle_dim, final_dim
-        for i in range(heads):
+        # self.Mw = tf.keras.Sequential()
+        # global heads, middle_dim, final_dim
+        # for i in range(heads):
           ## QuickHack: Use the swish activation
-          self.Mw.add(tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range)))
+          # self.Mw.add(tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range)))
           # self.Mw.add(tf.layers.Dense(middle_dim, final_dim, 'tanh'))
 
   def swish(x):
@@ -254,8 +254,11 @@ class BertModel(object):
         pres = pool(self.sequence_output, 1, att_type)
       else:
         embs = [pool(self.sequence_output, 1, att_type)]
+        global heads, middle_dim, final_dim
         for i in range(heads):
-          out = self.Mw(self.sequence_output)
+          # out = self.Mw(self.sequence_output)
+          Mwi = tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
+          out = Mwi(self.sequence_output)
           emb = pool(out, 1, att_type)
           embs.append(emb)
         print_op = tf.print(tf.shape(self.sequence_output))
