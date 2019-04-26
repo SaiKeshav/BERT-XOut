@@ -31,7 +31,7 @@ import sys
 
 att_type = None
 heads = None
-middel_dim = None
+middle_dim = None
 final_dim = None
 
 class BertConfig(object):
