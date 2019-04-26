@@ -368,7 +368,7 @@ class QNLIProcessor(DataProcessor):
       text_a = tokenization.convert_to_unicode(line[2])
       text_b = tokenization.convert_to_unicode(line[3])
       if set_type == "test":
-        label = "0"
+        label = "entailment"
       else:
         label = tokenization.convert_to_unicode(line[-1])
       examples.append(
@@ -408,7 +408,7 @@ class SNLIProcessor(DataProcessor):
       text_a = tokenization.convert_to_unicode(line[7])
       text_b = tokenization.convert_to_unicode(line[8])
       if set_type == "test":
-        label = "0"
+        label = "neutral"
       else:
         label = tokenization.convert_to_unicode(line[-1])
       examples.append(
