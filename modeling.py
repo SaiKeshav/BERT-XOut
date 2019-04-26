@@ -259,6 +259,8 @@ class BertModel(object):
         config = self.config
         out = self.Mw
         emb = pool(out, 1, att_type)
+        print(out.shape)
+        print(emb.shape)
         embs.append(emb)
         # for i in range(heads):
           # out = self.Mw(self.sequence_output)
@@ -269,9 +271,6 @@ class BertModel(object):
         # print_op = tf.print(tf.shape(self.sequence_output))
         # with tf.control_dependencies([print_op]):
           # pres = tf.concat(embs, 1)  
-        print(embs)
-        print(embs[1].shape)
-        print(emb.shape)
         pres = tf.concat(embs, 1)  
 
       return pres
