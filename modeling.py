@@ -245,14 +245,14 @@ class BertModel(object):
           for i in range(heads):
             ## QuickHack: Use the swish activation
             out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range))
-            out = swish(out)
+            out = self.swish(out)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
             embs.append(pool(out, 1, att_type))  
           self.pooled_output = tf.concat(embs, 1)
         elif(att_type != 0):
           self.pooled_output = pool(self.sequence_output, 1, att_type)
 
-  def swish(x):
+  def swish(self, x):
     return tf.multiply(tf.keras.backend.sigmoid(x), x)
 
   def get_pooled_output(self, att_type=0, heads=0):
