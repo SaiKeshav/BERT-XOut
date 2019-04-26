@@ -1078,7 +1078,7 @@ def main(_):
 
   modeling.att_type = FLAGS.att_type
   modeling.heads = FLAGS.heads
-  modeling.hidden_dim = FLAGS.hidden_dim
+  modeling.hidden_dim = FLAGS.middle_dim
   modeling.final_dim = FLAGS.final_dim
 
   processors = {
