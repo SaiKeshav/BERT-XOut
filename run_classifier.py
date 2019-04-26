@@ -1077,6 +1077,9 @@ def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
   modeling.att_type = FLAGS.att_type
+  modeling.heads = FLAGS.heads
+  modeling.hidden_dim = FLAGS.hidden_dim
+  modeling.final_dim = FLAGS.final_dim
 
   processors = {
       "cola": ColaProcessor,

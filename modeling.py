@@ -30,6 +30,9 @@ import os
 import sys
 
 att_type = None
+heads = None
+middel_dim = None
+final_dim = None
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
@@ -234,9 +237,10 @@ class BertModel(object):
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
         self.Mw = tf.keras.Sequential()
-        for i in range(config.heads):
-          self.Mw.add(tf.keras.Dense(config.hidden_size, config.middle_dim, activation=self.swish, kernel_initializer=create_initializer(config.initializer_range)))
-          self.Mw.add(tf.keras.Dense(config.middle_dim, config.final_dim, activation='tanh'))
+        global heads, middel_dim, final_dim
+        for i in range(heads):
+          self.Mw.add(tf.keras.Dense(hidden_size, middle_dim, activation=self.swish, kernel_initializer=create_initializer(config.initializer_range)))
+          self.Mw.add(tf.keras.Dense(middle_dim, final_dim, activation='tanh'))
 
   def swish(x):
     return (tf.keras.backend.sigmoid(x) * x)
