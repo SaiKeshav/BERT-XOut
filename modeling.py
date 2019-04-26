@@ -238,7 +238,7 @@ class BertModel(object):
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
         print('Middle dim '+str(middle_dim))            
-        self.Mw = tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
+        self.Mw = tf.layers.dense(first_token_tensor, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
         # self.Mw = tf.keras.Sequential()
         # global heads, middle_dim, final_dim
         # for i in range(heads):
@@ -258,7 +258,7 @@ class BertModel(object):
       else:
         embs = [pool(self.sequence_output, 1, att_type)]
         config = self.config
-        out = Mw(self.sequence_output)
+        out = self.Mw(self.sequence_output)
         emb = pool(out, 1, att_type)
         embs.append(emb)
         # for i in range(heads):
