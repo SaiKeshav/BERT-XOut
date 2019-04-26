@@ -270,6 +270,8 @@ class BertModel(object):
         # with tf.control_dependencies([print_op]):
           # pres = tf.concat(embs, 1)  
         print(embs)
+        print(embs[1].shape)
+        print(emb.shape)
         pres = tf.concat(embs, 1)  
 
       return pres
