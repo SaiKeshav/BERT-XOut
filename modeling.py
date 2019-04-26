@@ -248,6 +248,7 @@ class BertModel(object):
     return (tf.keras.backend.sigmoid(x) * x)
 
   def get_pooled_output(self, att_type=0, heads=0):
+    global heads, middle_dim, final_dim
     if(att_type == 0):
       return self.pooled_output
     else:
@@ -256,7 +257,6 @@ class BertModel(object):
       else:
         embs = [pool(self.sequence_output, 1, att_type)]
         config = self.config
-        global heads, middle_dim, final_dim
         for i in range(heads):
           # out = self.Mw(self.sequence_output)
           Mwi = tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
