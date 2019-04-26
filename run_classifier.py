@@ -883,10 +883,6 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_layer = model.get_pooled_output(modeling.att_type, modeling.heads)
 
   hidden_size = output_layer.shape[-1].value
-  print('Initial hidden size: '+str(hidden_size))
-  if(modeling.heads != 0):
-    hidden_size = output_layer.shape[-1].value + modeling.heads * modeling.final_dim
-  print('Final hidden size'+str(hidden_size))
 
   output_weights = tf.get_variable(
       "output_weights", [num_labels, hidden_size],
@@ -957,13 +953,13 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
       else:
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-    # tf.logging.info("**** Trainable Variables ****")
-    # for var in tvars:
-    #   init_string = ""
-    #   if var.name in initialized_variable_names:
-    #     init_string = ", *INIT_FROM_CKPT*"
-    #   tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-    #                   init_string)
+    tf.logging.info("**** Trainable Variables ****")
+    for var in tvars:
+      init_string = ""
+      if var.name in initialized_variable_names:
+        init_string = ", *INIT_FROM_CKPT*"
+      tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                      init_string)
 
     output_spec = None
     if mode == tf.estimator.ModeKeys.TRAIN:
