@@ -160,6 +160,7 @@ class BertModel(object):
         is invalid.
     """
     config = copy.deepcopy(config)
+    self.config = config
     if not is_training:
       config.hidden_dropout_prob = 0.0
       config.attention_probs_dropout_prob = 0.0
@@ -254,6 +255,7 @@ class BertModel(object):
         pres = pool(self.sequence_output, 1, att_type)
       else:
         embs = [pool(self.sequence_output, 1, att_type)]
+        config = self.config
         global heads, middle_dim, final_dim
         for i in range(heads):
           # out = self.Mw(self.sequence_output)
