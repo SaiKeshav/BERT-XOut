@@ -1123,7 +1123,7 @@ def main(_):
       tpu_config=tf.contrib.tpu.TPUConfig(
           iterations_per_loop=FLAGS.iterations_per_loop,
           num_shards=FLAGS.num_tpu_cores,
-          num_cores_per_replica=2,
+          num_cores_per_replica=4,
           per_host_input_for_training=is_per_host))
 
   train_examples = None
