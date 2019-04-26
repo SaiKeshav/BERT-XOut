@@ -260,15 +260,16 @@ class BertModel(object):
         out = Mw(self.sequence_output)
         emb = pool(out, 1, att_type)
         embs.append(emb)
-        for i in range(heads):
+        # for i in range(heads):
           # out = self.Mw(self.sequence_output)
           # Mwi = tf.layers.dense(config.hidden_size, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range))
           # out = Mw(self.sequence_output)
           # emb = pool(out, 1, att_type)
           # embs.append(emb)
-        print_op = tf.print(tf.shape(self.sequence_output))
-        with tf.control_dependencies([print_op]):
-          pres = tf.concat(embs, 1)  
+        # print_op = tf.print(tf.shape(self.sequence_output))
+        # with tf.control_dependencies([print_op]):
+          # pres = tf.concat(embs, 1)  
+        pres = tf.concat(embs, 1)  
 
       return pres
 
