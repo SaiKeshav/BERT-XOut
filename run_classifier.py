@@ -883,10 +883,10 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_layer = model.get_pooled_output(modeling.att_type, modeling.heads)
 
   hidden_size = output_layer.shape[-1].value
-  print('Initial hidden size: '+hidden_size)
+  print('Initial hidden size: '+str(hidden_size))
   if(modeling.heads != 0):
     hidden_size = output_layer.shape[-1].value + modeling.heads * modeling.final_dim
-  print('Final hidden size'+hidden_size)
+  print('Final hidden size'+str(hidden_size))
 
   output_weights = tf.get_variable(
       "output_weights", [num_labels, hidden_size],
