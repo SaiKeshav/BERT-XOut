@@ -250,8 +250,6 @@ class BertModel(object):
     if(att_type == 0):
       return self.pooled_output
     else:
-      # print_op = tf.print(tf.shape(self.sequence_output))
-      # with tf.control_dependencies([print_op]):
       if(heads == 0):
         pres = pool(self.sequence_output, 1, att_type)
       else:
@@ -260,7 +258,9 @@ class BertModel(object):
           out = self.Mw(self.sequence_output)
           emb = pool(out, 1, att_type)
           embs.append(emb)
-        pres = tf.concat(embs, 1)  
+        print_op = tf.print(tf.shape(self.sequence_output))
+        with tf.control_dependencies([print_op]):
+          pres = tf.concat(embs, 1)  
 
       return pres
 
