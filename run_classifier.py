@@ -894,11 +894,11 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   if(type(modeling.heads) != type(None)):
     head_loss = 0
     for i in range(modeling.heads):
-      mh0_i = tf.get_default_graph().get_tensor_by_name('pooler/mh0_'+str(i)+'/kernel:0')
-      mh1_i = tf.get_default_graph().get_tensor_by_name('pooler/mh1_'+str(i)+'/kernel:0')
+      mh0_i = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_'+str(i)+'/kernel:0')
+      mh1_i = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh1_'+str(i)+'/kernel:0')
       for j in range(i+1, modeling.heads):
-        mh0_j = tf.get_default_graph().get_tensor_by_name('pooler/mh0_'+str(j)+'/kernel:0')
-        mh1_j = tf.get_default_graph().get_tensor_by_name('pooler/mh1_'+str(j)+'/kernel:0')
+        mh0_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_'+str(j)+'/kernel:0')
+        mh1_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh1_'+str(j)+'/kernel:0')
         head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j)/(tf.norm(mh0_i) * tf.norm(mh0_j)) + tf.losses.mean_squared_error(mh1_i, mh1_j)/(tf.norm(mh1_i, mh1_j))
 
   with tf.variable_scope("loss"):
