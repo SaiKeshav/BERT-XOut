@@ -252,7 +252,7 @@ class BertModel(object):
   def swish(self, x):
     return tf.multiply(tf.keras.backend.sigmoid(x), x)
 
-  def get_pooled_output(self, att_type=0, heads=0):
+  def get_pooled_output(self):
     return self.pooled_output
 
   def get_sequence_output(self):
@@ -774,7 +774,7 @@ def attention_layer(from_tensor,
     new_value_layer = tf.tile(new_value_layer, multiply)
     attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
     attention_scores = attention_scores * (attention_mask+10000) / 10000
-    context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 2, att_type)
+    context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 3, att_type)
   else:
   # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
