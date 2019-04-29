@@ -900,6 +900,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       mh1_i = tf.math.l2_normalize(mh1_i)
       for j in range(i+1, modeling.heads):
         mh0_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_'+str(j)+'/kernel:0')
+        import ipdb
+        ipdb.set_trace()
         mh0_j = tf.math.l2_normalize(mh0_j)
         mh1_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh1_'+str(j)+'/kernel:0')
         mh1_j = tf.math.l2_normalize(mh1_j)
