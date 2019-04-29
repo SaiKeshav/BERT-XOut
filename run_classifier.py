@@ -891,6 +891,16 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
+  if(type(modeling.heads) != type(None)):
+    head_loss = 0
+    for i in range(modeling.heads):
+      mh0_i = tf.get_default_graph().get_tensor_by_name('pooler/'+os.path.split('mh0_')+str(i))
+      mh1_i = tf.get_default_graph().get_tensor_by_name('pooler/'+os.path.split('mh1_')+str(i))
+      for j in range(i+1, modeling.heads):
+        mh0_j = tf.get_default_graph().get_tensor_by_name('pooler/'+os.path.split('mh0_')+str(j))
+        mh1_j = tf.get_default_graph().get_tensor_by_name('pooler/'+os.path.split('mh1_')+str(j))
+        head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j)/(tf.norm(mh0_i) * tf.norm(mh0_j)) + tf.losses.mean_squared_error(mh1_i, mh1_j)/(tf.norm(mh1_i, mh1_j))
+
   with tf.variable_scope("loss"):
     if is_training:
       # I.e., 0.1 dropout
@@ -905,6 +915,9 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
+
+    if(type(modeling.heads) != type(None)):
+      loss = loss - head_loss
 
     return (loss, per_example_loss, logits, probabilities)
 
