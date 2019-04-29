@@ -242,7 +242,7 @@ class BertModel(object):
           for i in range(heads):
             out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
             print(out)
-            weights1 = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_0' + '/kernel:0')
+            weights1 = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_0' + '/BiasAdd:0')
             print(weights1)
             out = self.swish(weights1)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
