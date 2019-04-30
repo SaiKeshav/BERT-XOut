@@ -893,28 +893,21 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   if(modeling.heads != 0):
     head_loss = 0
-    with tf.variable_scope('bert/pooler/mh0_0', reuse=True):
-      mh0_0 = tf.get_variable('kernel')
-      mh0_0 = tf.math.l2_normalize(mh0_0)
-    with tf.variable_scope('bert/pooler/mh0_1', reuse=True):
-      mh0_1 = tf.get_variable('kernel')
-      mh0_1 = tf.math.l2_normalize(mh0_1)
-    head_loss += tf.losses.mean_squared_error(mh0_0, mh0_1)
-    print(mh0_0)
-    print(mh0_1)
-    # for i in range(modeling.heads):
-    #   mh0_i = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_'+str(i)+'/kernel:0') 
-    #   print('Printing...')
-    #   print(mh0_i)
-    #   mh0_i = tf.math.l2_normalize(mh0_i)
-    #   mh1_i = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh1_'+str(i)+'/kernel:0')
-    #   mh1_i = tf.math.l2_normalize(mh1_i)
-    #   for j in range(i+1, modeling.heads):
-    #     mh0_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh0_'+str(j)+'/kernel:0')
-    #     mh0_j = tf.math.l2_normalize(mh0_j)
-    #     mh1_j = tf.get_default_graph().get_tensor_by_name('bert/pooler/mh1_'+str(j)+'/kernel:0')
-    #     mh1_j = tf.math.l2_normalize(mh1_j)
-    #     head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
+    for i in range(modeling.heads):
+      with tf.variable_scope('bert/pooler/mh0_'+str(i), reuse=True):
+        mh0_i = tf.get_variable('kernel')
+        mh0_i = tf.math.l2_normalize(mh0_i)
+      with tf.variable_scope('bert/pooler/mh1_'+str(i), reuse=True):
+        mh1_i = tf.get_variable('kernel')
+        mh1_i = tf.math.l2_normalize(mh1_i)
+      for j in range(i+1, modeling.heads):
+        with tf.variable_scope('bert/pooler/mh0_'+str(j), reuse=True):
+          mh0_j = tf.get_variable('kernel')
+          mh0_j = tf.math.l2_normalize(mh0_j)
+        with tf.variable_scope('bert/pooler/mh1_'+str(j), reuse=True):
+          mh1_j = tf.get_variable('kernel')
+          mh1_j = tf.math.l2_normalize(mh1_j)
+        head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
 
   with tf.variable_scope("loss"):
     if is_training:
