@@ -899,6 +899,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     with tf.variable_scope('bert/pooler/mh0_1', reuse=True):
       mh0_1 = tf.get_variable('kernel')
       mh0_1 = tf.math.l2_normalize(mh0_1)
+    head_loss += tf.losses.mean_squared_error(mh0_0, mh0_1)
     print(mh0_0)
     print(mh0_1)
     # for i in range(modeling.heads):
@@ -930,8 +931,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
 
-    # if(type(modeling.heads) != type(None)):
-    #   loss = loss - head_loss
+    if(modeling.heads != 0):
+      loss = loss - head_loss
 
     return (loss, per_example_loss, logits, probabilities)
 
