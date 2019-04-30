@@ -891,12 +891,14 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
-  if(type(modeling.heads) != type(None)):
+  if(modeling.heads != 0):
     head_loss = 0
     with tf.variable_scope('bert/pooler/mh0_0', reuse=True):
       mh0_0 = tf.get_variable('kernel')
+      mh0_0 = tf.math.l2_normalize(mh0_0)
     with tf.variable_scope('bert/pooler/mh0_1', reuse=True):
       mh0_1 = tf.get_variable('kernel')
+      mh0_1 = tf.math.l2_normalize(mh0_1)
     print(mh0_0)
     print(mh0_1)
     # for i in range(modeling.heads):
