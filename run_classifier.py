@@ -1364,7 +1364,6 @@ def main(_):
 if __name__ == "__main__":
   seed = 1234
   tf.random.set_random_seed(seed)
-  np.random.seed(seed)
   flags.mark_flag_as_required("data_dir")
   flags.mark_flag_as_required("task_name")
   flags.mark_flag_as_required("vocab_file")
