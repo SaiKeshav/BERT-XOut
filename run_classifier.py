@@ -908,6 +908,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
           mh1_j = tf.get_variable('kernel')
           mh1_j = tf.math.l2_normalize(mh1_j)
         head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
+    head_loss = head_loss / (modeling.heads * modeling.heads)
 
   with tf.variable_scope("loss"):
     if is_training:
@@ -925,7 +926,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     loss = tf.reduce_mean(per_example_loss)
 
     if(modeling.heads != 0):
-      loss = loss - head_loss
+      loss = loss - head_loss / 10
 
     return (loss, per_example_loss, logits, probabilities)
 
