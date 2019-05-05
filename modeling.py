@@ -246,7 +246,7 @@ class BertModel(object):
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
             embs.append(pool(out, 1, pool_type))  
           self.pooled_output = tf.concat(embs, 1)
-        elif(att_type != 0):
+        elif(pool_type != 0):
           self.pooled_output = pool(self.sequence_output, 1, pool_type)
 
   def swish(self, x):
