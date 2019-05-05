@@ -142,6 +142,10 @@ flags.DEFINE_integer(
     "att_type", 0,
     "The attention type used")
 
+flags.DEFINE_integer(
+    "pool_type", 0,
+    "The attention type used")
+
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
 
@@ -1101,6 +1105,7 @@ def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
   modeling.att_type = FLAGS.att_type
+  modeling.pool_type = FLAGS.pool_type
   modeling.heads = FLAGS.heads
   modeling.middle_dim = FLAGS.middle_dim
   modeling.final_dim = FLAGS.final_dim
