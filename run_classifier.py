@@ -1120,7 +1120,7 @@ def main(_):
       "qqp": QQPProcessor,
       "rte": RTEProcessor,
       "snli": SNLIProcessor,
-      "sst": SSTProcessor,
+      "sst-2": SSTProcessor,
       "wnli": WNLIProcessor,
   }
 
