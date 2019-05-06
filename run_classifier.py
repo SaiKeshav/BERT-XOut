@@ -462,7 +462,8 @@ class QQPProcessor(DataProcessor):
     for (i, line) in enumerate(lines):
       if i == 0:
         continue
-      print(len(line))
+      if((set_type == 'train' or set_type == 'dev') and len(line) != 6):
+        continue
       guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
       text_a = tokenization.convert_to_unicode(line[3])
       text_b = tokenization.convert_to_unicode(line[4])
