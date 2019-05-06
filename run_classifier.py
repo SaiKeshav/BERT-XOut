@@ -1151,6 +1151,7 @@ def main(_):
   processor = processors[task_name]()
 
   label_list = processor.get_labels()
+  print(label_list)
 
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
