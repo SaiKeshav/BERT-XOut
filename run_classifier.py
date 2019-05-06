@@ -1316,7 +1316,7 @@ def main(_):
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     for key in sorted(result.keys()):
-      os.environ[str(key)] = result[str(key)]
+      os.environ[str(key)] = str(result[key])
 
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
