@@ -383,8 +383,8 @@ class QNLIProcessor(DataProcessor):
       if i == 0:
         continue
       guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
-      text_a = tokenization.convert_to_unicode(line[2])
-      text_b = tokenization.convert_to_unicode(line[3])
+      text_a = tokenization.convert_to_unicode(line[1])
+      text_b = tokenization.convert_to_unicode(line[2])
       if set_type == "test":
         label = "entailment"
       else:
@@ -462,9 +462,11 @@ class QQPProcessor(DataProcessor):
     for (i, line) in enumerate(lines):
       if i == 0:
         continue
+      if((set_type == 'train' or set_type == 'dev') and len(line) != 6):
+        continue
       guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
-      text_a = tokenization.convert_to_unicode(line[2])
-      text_b = tokenization.convert_to_unicode(line[3])
+      text_a = tokenization.convert_to_unicode(line[3])
+      text_b = tokenization.convert_to_unicode(line[4])
       if set_type == "test":
         label = "0"
       else:

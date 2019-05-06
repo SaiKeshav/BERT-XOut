@@ -239,15 +239,15 @@ class BertModel(object):
             activation=tf.tanh,
             kernel_initializer=create_initializer(config.initializer_range))
         if(heads != 0):
-          embs = [pool(self.sequence_output, 1, att_type)]
+          embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
             out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
             out = self.swish(out)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
-            embs.append(pool(out, 1, att_type))  
+            embs.append(pool(out, 1, pool_type))  
           self.pooled_output = tf.concat(embs, 1)
-        elif(att_type != 0):
-          self.pooled_output = pool(self.sequence_output, 1, att_type)
+        elif(pool_type != 0):
+          self.pooled_output = pool(self.sequence_output, 1, pool_type)
 
   def swish(self, x):
     return tf.multiply(tf.keras.backend.sigmoid(x), x)
@@ -774,7 +774,7 @@ def attention_layer(from_tensor,
     new_value_layer = tf.tile(new_value_layer, multiply)
     attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
     attention_scores = attention_scores * (attention_mask+10000) / 10000
-    context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 3, pool_type)
+    context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 3, att_type)
   else:
   # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
