@@ -579,7 +579,7 @@ def create_attention_mask_from_input_mask(from_tensor, to_mask):
 def pool(tensor, axis, pool_type):
   if(pool_type == 1): # Maxout
     return tf.reduce_max(tensor, axis=axis)
-  elif(pool_type == 2): # AbsMaxout
+  elif(pool_type == 2): # xout
     t_max = tf.reduce_max(tensor, axis=axis)
     t_min = tf.reduce_min(tensor, axis=axis)
     t_amax = tf.reduce_max(tf.abs(tensor), axis=axis)
@@ -766,28 +766,28 @@ def attention_layer(from_tensor,
   # `value_layer` = [B, N, T, H]
   value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
 
-  global att_type
-  # print_op = tf.print(tf.shape(value_layer))
-  if(att_type > 0 and last_layer):
-    # T
-    num_tokens = get_shape_list(value_layer)[2]
-    # [B, N, 1, T, H]
-    exp_value_layer = tf.expand_dims(value_layer, -2)
-    multiply = tf.constant([1,1,1,num_tokens,1])
-    # [B, N, F, T, H]
-    exp_value_layer = tf.tile(exp_value_layer, multiply)
-    attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
-    # [B, N, F, T]
-    attention_scores = attention_scores * attention_mask 
-    # [B, N, F, T, 1]
-    attention_scores = tf.expand_dims(attention_scores, -1)
-    # [B, N, F, T, H]
-    attended_value_layer = attention_scores * exp_value_layer
-    # [B, N, F, H]
-    context_layer = pool(attended_value_layer, 3, att_type)
-  else:
-  # `context_layer` = [B, N, F, H]
-    context_layer = tf.matmul(attention_probs, value_layer)
+  # global att_type
+  # # print_op = tf.print(tf.shape(value_layer))
+  # if(att_type > 0 and last_layer):
+  #   # T
+  #   num_tokens = get_shape_list(value_layer)[2]
+  #   # [B, N, 1, T, H]
+  #   exp_value_layer = tf.expand_dims(value_layer, -2)
+  #   multiply = tf.constant([1,1,1,num_tokens,1])
+  #   # [B, N, T, T, H]
+  #   exp_value_layer = tf.tile(exp_value_layer, multiply)
+  #   attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
+  #   # [B, N, T, T]
+  #   attention_scores = attention_scores * attention_mask 
+  #   # [B, N, F, T, 1]
+  #   attention_scores = tf.expand_dims(attention_scores, -1)
+  #   # [B, N, F, T, H]
+  #   attended_value_layer = attention_scores * exp_value_layer
+  #   # [B, N, F, H]
+  #   context_layer = pool(attended_value_layer, 3, att_type)
+  # else:
+  # # `context_layer` = [B, N, F, H]
+  context_layer = tf.matmul(attention_probs, value_layer)
 
   # `context_layer` = [B, F, N, H]
   # with tf.control_dependencies([print_op]):
@@ -804,7 +804,7 @@ def attention_layer(from_tensor,
         context_layer,
         [batch_size, from_seq_length, num_attention_heads * size_per_head])
 
-  return context_layer
+  return context_layer, attention_scores*attention_mask
 
 
 def transformer_model(input_tensor,
@@ -886,7 +886,7 @@ def transformer_model(input_tensor,
       with tf.variable_scope("attention"):
         attention_heads = []
         with tf.variable_scope("self"):
-          attention_head = attention_layer(
+          attention_head, attention_scores = attention_layer(
               from_tensor=layer_input,
               to_tensor=layer_input,
               attention_mask=attention_mask,
@@ -946,6 +946,15 @@ def transformer_model(input_tensor,
     return final_outputs
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)
+    print("Shape :")
+    print(tf.shape(final_output))
+    # attention_scores: [B, N, F, T]
+    # [B, N, T]
+    head_mean = tf.reduce_mean(attention_scores, 2)
+    # [B, 1, T]
+    token_mean = tf.reduce_mean(attention_scores, 1, keepdims=True)
+    # [B, T, H]
+    final_output * tf.transpose(token_mean, [0, 2, 1])
     return final_output
 
 
