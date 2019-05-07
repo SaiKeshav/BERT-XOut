@@ -943,19 +943,21 @@ def transformer_model(input_tensor,
     final_outputs = []
     for layer_num, layer_output in enumerate(all_layer_outputs):
       final_output = reshape_from_matrix(layer_output, input_shape)
-      print('Shape: '+str(get_shape_list(final_output)))
+      if(layer_num == len(all_layer_outputs) - 1):
+        # attention_scores: [B, N, F, T]
+        # [B, N, T]
+        head_mean = tf.reduce_mean(attention_scores, 2)
+        # [B, 1, T]
+        token_mean = tf.reduce_mean(attention_scores, 1, keepdims=True)
+        # [B, T, H]
+        print('Shape att_scores: ',get_shape_list(attention_scores))
+        print('Shape head_scores: ',get_shape_list(head_mean))
+        print('Shape token_scores: ',get_shape_list(token_mean))
+        final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
       final_outputs.append(final_output)
     return final_outputs
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)
-    # print("Shape :"+str(tf.shape(final_output)))
-    # # attention_scores: [B, N, F, T]
-    # # [B, N, T]
-    # head_mean = tf.reduce_mean(attention_scores, 2)
-    # # [B, 1, T]
-    # token_mean = tf.reduce_mean(attention_scores, 1, keepdims=True)
-    # # [B, T, H]
-    # final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
     return final_output
 
 
