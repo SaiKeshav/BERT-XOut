@@ -772,8 +772,8 @@ def attention_layer(from_tensor,
     # T
     num_tokens = get_shape_list(value_layer)[2]
     # [B, N, 1, T, H]
-    exp_value_layer = tf.expand_dims(value_layer, 2)
-    multiply = tf.constant([1,1,num_tokens,1,1])
+    exp_value_layer = tf.expand_dims(value_layer, -2)
+    multiply = tf.constant([1,1,1,num_tokens,1])
     # [B, N, F, T, H]
     exp_value_layer = tf.tile(exp_value_layer, multiply)
     attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
