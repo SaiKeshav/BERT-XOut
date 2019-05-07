@@ -230,7 +230,7 @@ class BertModel(object):
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
       with tf.variable_scope("pooler"):
-        if(heads != 0):
+        if(pool_type != 0 or heads != 0):
           embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
             out = tf.layers.dense(self.sequence_output, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
@@ -238,8 +238,6 @@ class BertModel(object):
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
             embs.append(pool(out, 1, pool_type))  
           self.pooled_output = tf.concat(embs, 1)
-        elif(pool_type != 0):
-          self.pooled_output = pool(self.sequence_output, 1, pool_type)
         else:
           # We "pool" the model by simply taking the hidden state corresponding
           # to the first token. We assume that this has been pre-trained
@@ -771,13 +769,22 @@ def attention_layer(from_tensor,
   global att_type
   # print_op = tf.print(tf.shape(value_layer))
   if(att_type > 0 and last_layer):
+    # T
     num_tokens = get_shape_list(value_layer)[2]
-    new_value_layer = tf.expand_dims(value_layer, 3)
-    multiply = tf.constant([1,1,1,num_tokens,1])
-    new_value_layer = tf.tile(new_value_layer, multiply)
+    # [B, N, 1, T, H]
+    exp_value_layer = tf.expand_dims(value_layer, 2)
+    multiply = tf.constant([1,1,num_tokens,1,1])
+    # [B, N, F, T, H]
+    exp_value_layer = tf.tile(exp_value_layer, multiply)
     attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
-    attention_scores = attention_scores * (attention_mask+10000) / 10000
-    context_layer = pool(tf.multiply(tf.expand_dims(attention_scores, -1), new_value_layer), 3, att_type)
+    # [B, N, F, T]
+    attention_scores = attention_scores * attention_mask 
+    # [B, N, F, T, 1]
+    attention_scores = tf.expand_dims(attention_scores, -1)
+    # [B, N, F, T, H]
+    attended_value_layer = attention_scores * exp_value_layer
+    # [B, N, F, H]
+    context_layer = pool(attended_value_layer, 3, att_type)
   else:
   # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
