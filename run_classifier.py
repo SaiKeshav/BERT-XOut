@@ -934,7 +934,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     loss = tf.reduce_mean(per_example_loss)
 
     if(modeling.heads != 0):
-      loss = loss + head_loss / 10
+      loss = loss - head_loss / 10
 
     return (loss, per_example_loss, logits, probabilities)
 
