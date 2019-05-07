@@ -231,7 +231,8 @@ class BertModel(object):
       # dimensional representation of the segment.
       with tf.variable_scope("pooler"):
         if(heads != 0):
-          embs = [pool(self.sequence_output, 1, pool_type)]
+          embs = []
+          # embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
             out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
             out = self.swish(out)
