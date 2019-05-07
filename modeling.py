@@ -230,17 +230,16 @@ class BertModel(object):
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
       with tf.variable_scope("pooler"):
-        if(heads != 0):
-          embs = []
-          # embs = [pool(self.sequence_output, 1, pool_type)]
+        if(pool_type != 0 or heads != 0):
+          embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
             out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
             out = self.swish(out)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
             embs.append(pool(out, 1, pool_type))  
           self.pooled_output = tf.concat(embs, 1)
-        elif(pool_type != 0):
-          self.pooled_output = pool(self.sequence_output, 1, pool_type)
+        # elif(pool_type != 0):
+          # self.pooled_output = pool(self.sequence_output, 1, pool_type)
         else:
           # We "pool" the model by simply taking the hidden state corresponding
           # to the first token. We assume that this has been pre-trained
