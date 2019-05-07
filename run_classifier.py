@@ -891,7 +891,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_layer = model.get_pooled_output()
 
   hidden_size = output_layer.shape[-1].value
-  print_op = tf.print(hidden_size) 
+  print_op = tf.print("Hidden Size = %d"%hidden_size) 
 
   with tf.control_dependencies([print_op]):
     output_weights = tf.get_variable(
