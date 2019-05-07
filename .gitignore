@@ -114,3 +114,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+*.swp
+glue_data/
+download_glue_data/
