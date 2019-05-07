@@ -230,14 +230,6 @@ class BertModel(object):
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
       with tf.variable_scope("pooler"):
-        # We "pool" the model by simply taking the hidden state corresponding
-        # to the first token. We assume that this has been pre-trained
-        first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
-        self.pooled_output = tf.layers.dense(
-            first_token_tensor,
-            config.hidden_size,
-            activation=tf.tanh,
-            kernel_initializer=create_initializer(config.initializer_range))
         if(heads != 0):
           embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
@@ -248,6 +240,15 @@ class BertModel(object):
           self.pooled_output = tf.concat(embs, 1)
         elif(pool_type != 0):
           self.pooled_output = pool(self.sequence_output, 1, pool_type)
+        else:
+          # We "pool" the model by simply taking the hidden state corresponding
+          # to the first token. We assume that this has been pre-trained
+          first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
+          self.pooled_output = tf.layers.dense(
+              first_token_tensor,
+              config.hidden_size,
+              activation=tf.tanh,
+              kernel_initializer=create_initializer(config.initializer_range))
 
   def swish(self, x):
     return tf.multiply(tf.keras.backend.sigmoid(x), x)
