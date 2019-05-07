@@ -251,7 +251,7 @@ class BertModel(object):
               kernel_initializer=create_initializer(config.initializer_range))
 
   def swish(self, x):
-    return tf.multiply(tf.keras.backend.sigmoid(x), x)
+    return tf.keras.backend.sigmoid(x) * x
 
   def get_pooled_output(self):
     return self.pooled_output
