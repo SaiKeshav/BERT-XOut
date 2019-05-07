@@ -943,7 +943,7 @@ def transformer_model(input_tensor,
     final_outputs = []
     for layer_num, layer_output in enumerate(all_layer_outputs):
       final_output = reshape_from_matrix(layer_output, input_shape)
-      print('Shape: '+str(tf.shape(final_output)))
+      print('Shape: '+str(get_shape_list(final_output)))
       final_outputs.append(final_output)
     return final_outputs
   else:
