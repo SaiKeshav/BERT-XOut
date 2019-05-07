@@ -938,6 +938,7 @@ def transformer_model(input_tensor,
         prev_output = layer_output
         all_layer_outputs.append(layer_output)
 
+  print("Return Layers: "+str(do_return_all_layers))
   if do_return_all_layers:
     final_outputs = []
     for layer_output in all_layer_outputs:
@@ -946,15 +947,14 @@ def transformer_model(input_tensor,
     return final_outputs
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)
-    print("Shape :")
-    print(tf.shape(final_output))
+    print("Shape :"+str(tf.shape(final_output)))
     # attention_scores: [B, N, F, T]
     # [B, N, T]
     head_mean = tf.reduce_mean(attention_scores, 2)
     # [B, 1, T]
     token_mean = tf.reduce_mean(attention_scores, 1, keepdims=True)
     # [B, T, H]
-    final_output * tf.transpose(token_mean, [0, 2, 1])
+    final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
     return final_output
 
 
