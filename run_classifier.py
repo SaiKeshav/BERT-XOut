@@ -899,24 +899,25 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
-  if(modeling.heads != 0):
-    head_loss = 0
-    for i in range(modeling.heads):
-      with tf.variable_scope('bert/pooler/mh0_'+str(i), reuse=True):
-        mh0_i = tf.get_variable('kernel')
-        mh0_i = tf.math.l2_normalize(mh0_i)
-      with tf.variable_scope('bert/pooler/mh1_'+str(i), reuse=True):
-        mh1_i = tf.get_variable('kernel')
-        mh1_i = tf.math.l2_normalize(mh1_i)
-      for j in range(i+1, modeling.heads):
-        with tf.variable_scope('bert/pooler/mh0_'+str(j), reuse=True):
-          mh0_j = tf.get_variable('kernel')
-          mh0_j = tf.math.l2_normalize(mh0_j)
-        with tf.variable_scope('bert/pooler/mh1_'+str(j), reuse=True):
-          mh1_j = tf.get_variable('kernel')
-          mh1_j = tf.math.l2_normalize(mh1_j)
-        head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
-    head_loss = head_loss / (modeling.heads * modeling.heads)
+  # Penalty loss
+  # if(modeling.heads != 0):
+  #   head_loss = 0
+  #   for i in range(modeling.heads):
+  #     with tf.variable_scope('bert/pooler/mh0_'+str(i), reuse=True):
+  #       mh0_i = tf.get_variable('kernel')
+  #       mh0_i = tf.math.l2_normalize(mh0_i)
+  #     with tf.variable_scope('bert/pooler/mh1_'+str(i), reuse=True):
+  #       mh1_i = tf.get_variable('kernel')
+  #       mh1_i = tf.math.l2_normalize(mh1_i)
+  #     for j in range(i+1, modeling.heads):
+  #       with tf.variable_scope('bert/pooler/mh0_'+str(j), reuse=True):
+  #         mh0_j = tf.get_variable('kernel')
+  #         mh0_j = tf.math.l2_normalize(mh0_j)
+  #       with tf.variable_scope('bert/pooler/mh1_'+str(j), reuse=True):
+  #         mh1_j = tf.get_variable('kernel')
+  #         mh1_j = tf.math.l2_normalize(mh1_j)
+  #       head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
+  #   head_loss = head_loss / (modeling.heads * modeling.heads)
 
   with tf.variable_scope("loss"):
     if is_training:
@@ -933,8 +934,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
 
-    if(modeling.heads != 0):
-      loss = loss - head_loss / 10
+    # if(modeling.heads != 0):
+    #   loss = loss - head_loss / 10
 
     return (loss, per_example_loss, logits, probabilities)
 
