@@ -26,6 +26,7 @@ import re
 import modeling
 import tokenization
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 
 flags = tf.flags
 

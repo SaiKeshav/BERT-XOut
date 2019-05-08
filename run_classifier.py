@@ -26,6 +26,7 @@ import optimization
 import tokenization
 import tensorflow as tf
 from wurlitzer import pipes
+from tensorflow.python import debug as tf_debug
 
 flags = tf.flags
 
@@ -62,6 +63,14 @@ flags.DEFINE_bool(
     "Whether to lower case the input text. Should be True for uncased "
     "models and False for cased models.")
 
+flags.DEFINE_bool(
+    "penalty", False,
+    "Whether to use penalty or not")
+
+flags.DEFINE_bool(
+    "debug", False,
+    "Whether to use penalty or not")
+
 flags.DEFINE_integer(
     "max_seq_length", 128,
     "The maximum total input sequence length after WordPiece tokenization. "
@@ -75,6 +84,10 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
     "final_dim", 100,
     "for multi-head")
+
+flags.DEFINE_integer(
+    "exp", 0,
+    "exp_num")
 
 flags.DEFINE_integer(
     "heads", 0,
@@ -758,6 +771,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   assert len(segment_ids) == max_seq_length
 
   label_id = label_map[example.label]
+  '''
   if ex_index < 5:
     tf.logging.info("*** Example ***")
     tf.logging.info("guid: %s" % (example.guid))
@@ -767,6 +781,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
     tf.logging.info("label: %s (id = %d)" % (example.label, label_id))
+  '''
 
   feature = InputFeatures(
       input_ids=input_ids,
@@ -903,24 +918,24 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
   # Penalty loss
-  # if(modeling.heads != 0):
-  #   head_loss = 0
-  #   for i in range(modeling.heads):
-  #     with tf.variable_scope('bert/pooler/mh0_'+str(i), reuse=True):
-  #       mh0_i = tf.get_variable('kernel')
-  #       mh0_i = tf.math.l2_normalize(mh0_i)
-  #     with tf.variable_scope('bert/pooler/mh1_'+str(i), reuse=True):
-  #       mh1_i = tf.get_variable('kernel')
-  #       mh1_i = tf.math.l2_normalize(mh1_i)
-  #     for j in range(i+1, modeling.heads):
-  #       with tf.variable_scope('bert/pooler/mh0_'+str(j), reuse=True):
-  #         mh0_j = tf.get_variable('kernel')
-  #         mh0_j = tf.math.l2_normalize(mh0_j)
-  #       with tf.variable_scope('bert/pooler/mh1_'+str(j), reuse=True):
-  #         mh1_j = tf.get_variable('kernel')
-  #         mh1_j = tf.math.l2_normalize(mh1_j)
-  #       head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
-  #   head_loss = head_loss / (modeling.heads * modeling.heads)
+  if(FLAGS.penalty and modeling.heads != 0):
+    head_loss = 0
+    for i in range(modeling.heads):
+      with tf.variable_scope('bert/pooler/mh0_'+str(i), reuse=True):
+        mh0_i = tf.get_variable('kernel')
+        mh0_i = tf.math.l2_normalize(mh0_i)
+      with tf.variable_scope('bert/pooler/mh1_'+str(i), reuse=True):
+        mh1_i = tf.get_variable('kernel')
+        mh1_i = tf.math.l2_normalize(mh1_i)
+      for j in range(i+1, modeling.heads):
+        with tf.variable_scope('bert/pooler/mh0_'+str(j), reuse=True):
+          mh0_j = tf.get_variable('kernel')
+          mh0_j = tf.math.l2_normalize(mh0_j)
+        with tf.variable_scope('bert/pooler/mh1_'+str(j), reuse=True):
+          mh1_j = tf.get_variable('kernel')
+          mh1_j = tf.math.l2_normalize(mh1_j)
+        head_loss += tf.losses.mean_squared_error(mh0_i, mh0_j) + tf.losses.mean_squared_error(mh1_i, mh1_j)
+    head_loss = head_loss / (modeling.heads * modeling.heads)
 
   with tf.variable_scope("loss"):
     if is_training:
@@ -937,8 +952,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
 
-    # if(modeling.heads != 0):
-    #   loss = loss - head_loss / 10
+    if(FLAGS.penalty and modeling.heads != 0):
+      loss = loss - head_loss / 10
 
     return (loss, per_example_loss, logits, probabilities)
 
@@ -1115,6 +1130,7 @@ def main(_):
   modeling.heads = FLAGS.heads
   modeling.middle_dim = FLAGS.middle_dim
   modeling.final_dim = FLAGS.final_dim
+  modeling.exp = FLAGS.exp
 
   processors = {
       "cola": ColaProcessor,
@@ -1132,6 +1148,9 @@ def main(_):
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
+
+  if FLAGS.debug:
+      FLAGS.use_tpu = False
 
   if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict and not FLAGS.do_train_and_eval:
     raise ValueError(
@@ -1316,7 +1335,11 @@ def main(_):
         is_training=False,
         drop_remainder=eval_drop_remainder)
 
-    result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+    if(FLAGS.debug):
+        hooks = [tf_debug.LocalCLIDebugHook()]
+    else:
+        hooks = []
+    result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps, hooks=hooks)
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     for key in sorted(result.keys()):

@@ -34,6 +34,7 @@ pool_type = None
 heads = None
 middle_dim = None
 final_dim = None
+exp = None
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
@@ -766,28 +767,34 @@ def attention_layer(from_tensor,
   # `value_layer` = [B, N, T, H]
   value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
 
-  # global att_type
-  # # print_op = tf.print(tf.shape(value_layer))
-  # if(att_type > 0 and last_layer):
-  #   # T
-  #   num_tokens = get_shape_list(value_layer)[2]
-  #   # [B, N, 1, T, H]
-  #   exp_value_layer = tf.expand_dims(value_layer, -2)
-  #   multiply = tf.constant([1,1,1,num_tokens,1])
-  #   # [B, N, T, T, H]
-  #   exp_value_layer = tf.tile(exp_value_layer, multiply)
-  #   attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
-  #   # [B, N, T, T]
-  #   attention_scores = attention_scores * attention_mask 
-  #   # [B, N, F, T, 1]
-  #   attention_scores = tf.expand_dims(attention_scores, -1)
-  #   # [B, N, F, T, H]
-  #   attended_value_layer = attention_scores * exp_value_layer
-  #   # [B, N, F, H]
-  #   context_layer = pool(attended_value_layer, 3, att_type)
-  # else:
-  # # `context_layer` = [B, N, F, H]
-  context_layer = tf.matmul(attention_probs, value_layer)
+  global att_type, exp
+  if(exp == 3 and att_type > 0 and last_layer):
+      # [B, N, T]
+      imp = tf.reduce_mean(att_probs, 2, name='last_mean')
+      # [B, N, T, H]
+      context_layer = value_layer * tf.expand_dims(imp, -1)
+
+  # print_op = tf.print(tf.shape(value_layer))
+  elif(exp == 1 and att_type > 0 and last_layer):
+    # T
+    num_tokens = get_shape_list(value_layer)[2]
+    # [B, N, 1, T, H]
+    exp_value_layer = tf.expand_dims(value_layer, -2)
+    multiply = tf.constant([1,1,1,num_tokens,1])
+    # [B, N, T, T, H]
+    exp_value_layer = tf.tile(exp_value_layer, multiply)
+    attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
+    # [B, N, T, T]
+    attention_scores = attention_scores * attention_mask 
+    # [B, N, F, T, 1]
+    attention_scores = tf.expand_dims(attention_scores, -1)
+    # [B, N, F, T, H]
+    attended_value_layer = attention_scores * exp_value_layer
+    # [B, N, F, H]
+    context_layer = pool(attended_value_layer, 3, att_type)
+  else:
+    # `context_layer` = [B, N, F, H]
+    context_layer = tf.matmul(attention_probs, value_layer)
 
   # `context_layer` = [B, F, N, H]
   # with tf.control_dependencies([print_op]):
@@ -804,7 +811,7 @@ def attention_layer(from_tensor,
         context_layer,
         [batch_size, from_seq_length, num_attention_heads * size_per_head])
 
-  return context_layer, attention_scores*attention_mask
+  return context_layer, attention_probs
 
 
 def transformer_model(input_tensor,
@@ -886,7 +893,7 @@ def transformer_model(input_tensor,
       with tf.variable_scope("attention"):
         attention_heads = []
         with tf.variable_scope("self"):
-          attention_head, attention_scores = attention_layer(
+          attention_head, attention_probs = attention_layer(
               from_tensor=layer_input,
               to_tensor=layer_input,
               attention_mask=attention_mask,
@@ -938,24 +945,36 @@ def transformer_model(input_tensor,
         prev_output = layer_output
         all_layer_outputs.append(layer_output)
 
-  global att_type
+  global att_type, exp
   if do_return_all_layers:
     final_outputs = []
     for layer_num, layer_output in enumerate(all_layer_outputs):
       final_output = reshape_from_matrix(layer_output, input_shape)
-      if(layer_num == len(all_layer_outputs) - 1 and att_type > 0):
+      if(exp == 2 and layer_num == len(all_layer_outputs) - 1 and att_type > 0):
         # attention_scores: [B, N, F, T]
         # [B, N, T]
-        head_mean = tf.reduce_mean(attention_scores, 2)
+        head_mean = tf.reduce_mean(attention_probs, 2, name='head_mean')
         # [B, 1, T]
-        token_mean = tf.reduce_mean(head_mean, 1, keepdims=True)
+        # token_mean = tf.reduce_mean(head_mean, 1, keepdims=True, name='token_mean')
+        token_sum = tf.reduce_sum(head_mean, 1, keepdims=True, name='token_sum')
+        nonzeros = tf.count_nonzero(head_mean, 1, keepdims=True, name='token_nz')
+        nonzeros = tf.cast(nonzeros, tf.float32)
+        nonzeros += 1 # Just for safety
+        token_mean = tf.div(token_sum, nonzeros, name='token_mean')
+
+        token_mean = tf.nn.relu(token_mean, name='token_mean_relu')
         # [B, T, H]
         final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
-      final_outputs.append(final_output)
+      final_outputs.append(final_output[:, :-1])
     return final_outputs
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)
     return final_output
+
+def reduce_nonzero_mean(t, dim, name):
+    full_sum = tf.reduce_sum(t, dim, name=name+"_sum")
+    non_zeros = tf.count_nonzero(t, dim, name=name+"_nonzero")
+    return full_sum / non_zeros
 
 
 def get_shape_list(tensor, expected_rank=None, name=None):
