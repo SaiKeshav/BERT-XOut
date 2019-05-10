@@ -225,17 +225,26 @@ class BertModel(object):
             do_return_all_layers=True)
 
       self.sequence_output = self.all_encoder_layers[-1]
+      self.penulti_output = self.all_encoder_layers[-2]
+      
       # The "pooler" converts the encoded sequence tensor of shape
       # [batch_size, seq_length, hidden_size] to a tensor of shape
       # [batch_size, hidden_size]. This is necessary for segment-level
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
       with tf.variable_scope("pooler"):
-        if(pool_type != 0 or heads != 0):
+        if(exp == 4):
+          self.pooled_output = pool(self.penulti_output, 1, pool_type)
+        elif(pool_type != 0 or heads != 0):
+          self.pooled_output = tf.layers.dense(self.sequence_output,
+                  config.hidden_size,
+                  activation=tf.tanh,
+                  kernel_initializer=create_initializer(config.initializer_range))
+          self.sequence_output = self.pooled_output
           embs = [pool(self.sequence_output, 1, pool_type)]
           for i in range(heads):
-            out = tf.layers.dense(self.sequence_output, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
-            # out = self.swish(out)
+            out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
+            out = self.swish(out)
             out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
             embs.append(pool(out, 1, pool_type))  
           self.pooled_output = tf.concat(embs, 1)
@@ -577,6 +586,13 @@ def create_attention_mask_from_input_mask(from_tensor, to_mask):
 
   return mask
 
+def xmax(tensor, axis):
+    t_max = tf.reduce_max(tensor, axis=axis)
+    t_min = tf.reduce_min(tensor, axis=axis)
+    t_amax = tf.reduce_max(tf.abs(tensor), axis=axis)
+    teq = tf.equal(t_max, tf.maximum(t_max, t_amax))
+    return tf.where(teq, t_max, t_min)
+
 def pool(tensor, axis, pool_type):
   if(pool_type == 1): # Maxout
     return tf.reduce_max(tensor, axis=axis)
@@ -584,10 +600,24 @@ def pool(tensor, axis, pool_type):
     t_max = tf.reduce_max(tensor, axis=axis)
     t_min = tf.reduce_min(tensor, axis=axis)
     t_amax = tf.reduce_max(tf.abs(tensor), axis=axis)
-
     teq = tf.equal(t_max, tf.maximum(t_max, t_amax))
     return tf.where(teq, t_max, t_min)
-    
+  elif(pool_type == 3): # nli-maxout
+    assert axis==1
+    N = get_shape_list(tensor)[axis]
+    s1_max = tf.reduce_max(tensor[:,1:int(N/2),:], axis=axis)
+    s2_max = tf.reduce_max(tensor[:,int(N/2+1):,:], axis=axis)
+    s12_diff = tf.abs(s1_max - s2_max)
+    s12_mul = s1_max * s2_max
+    return tf.concat([s1_max, s2_max, s12_diff, s12_mul], -1)
+  elif(pool_type == 4): # nli-xout
+    assert axis==1
+    N = get_shape_list(tensor)[axis]
+    s1_xmax = xmax(tensor[:,1:int(N/2),:], axis=axis)
+    s2_xmax = xmax(tensor[:,int(N/2+1):,:], axis=axis)
+    s12_diff = tf.abs(s1_xmax - s2_xmax)
+    s12_mul = s1_xmax * s2_xmax
+    return tf.concat([s1_xmax, s2_xmax, s12_diff, s12_mul], -1)
 
 def attention_layer(from_tensor,
                     to_tensor,
@@ -769,8 +799,13 @@ def attention_layer(from_tensor,
 
   global att_type, exp
   if(exp == 3 and att_type > 0 and last_layer):
+      # imp = tf.reduce_mean(attention_probs, 2, name='last_mean')
+      imp_sum = tf.reduce_sum(attention_probs, 2, name='imp_sum')
+      nonzeros = tf.count_nonzero(attention_probs, 2, name='imp_nz')
+      nonzeros = tf.cast(nonzeros, tf.float32)
+      nonzeros += 1
       # [B, N, T]
-      imp = tf.reduce_mean(att_probs, 2, name='last_mean')
+      imp = tf.div(imp_sum, nonzeros, name='imp')
       # [B, N, T, H]
       context_layer = value_layer * tf.expand_dims(imp, -1)
 
@@ -965,7 +1000,9 @@ def transformer_model(input_tensor,
         token_mean = tf.nn.relu(token_mean, name='token_mean_relu')
         # [B, T, H]
         final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
-      final_outputs.append(final_output[:, :-1])
+      if((exp == 2 or exp == 3) and layer_num == len(all_layer_outputs) - 1 and att_type > 0):
+        final_output = final_output[:, :-1]
+      final_outputs.append(final_output)
     return final_outputs
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)

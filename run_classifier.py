@@ -27,6 +27,9 @@ import tokenization
 import tensorflow as tf
 from wurlitzer import pipes
 from tensorflow.python import debug as tf_debug
+import pdb
+import math
+import numpy as np
 
 flags = tf.flags
 
@@ -674,7 +677,7 @@ class SSTProcessor(DataProcessor):
     examples = []
     for (i, line) in enumerate(lines):
       # Only the test set has a header
-      if set_type == "test" and i == 0:
+      if i == 0:
         continue
       guid = "%s-%s" % (set_type, i)
       if set_type == "test":
@@ -709,15 +712,21 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   if example.text_b:
     tokens_b = tokenizer.tokenize(example.text_b)
 
-  if tokens_b:
-    # Modifies `tokens_a` and `tokens_b` in place so that the total
-    # length is less than the specified length.
-    # Account for [CLS], [SEP], [SEP] with "- 3"
-    _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
+  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4:
+      if len(tokens_a) > max_seq_length / 2 - 2:
+          tokens_a = tokens_a[0:int(max_seq_length/2 -2)]
+      if len(tokens_b) > max_seq_length / 2 - 1:
+          tokens_b = tokens_a[0:int(max_seq_length/2 -1)]
   else:
-    # Account for [CLS] and [SEP] with "- 2"
-    if len(tokens_a) > max_seq_length - 2:
-      tokens_a = tokens_a[0:(max_seq_length - 2)]
+      if tokens_b:
+        # Modifies `tokens_a` and `tokens_b` in place so that the total
+        # length is less than the specified length.
+        # Account for [CLS], [SEP], [SEP] with "- 3"
+        _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
+      else:
+        # Account for [CLS] and [SEP] with "- 2"
+        if len(tokens_a) > max_seq_length - 2:
+          tokens_a = tokens_a[0:(max_seq_length - 2)]
 
   # The convention in BERT is:
   # (a) For sequence pairs:
@@ -739,26 +748,59 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   # the entire model is fine-tuned.
   tokens = []
   segment_ids = []
+  input_mask = []
   tokens.append("[CLS]")
   segment_ids.append(0)
-  for token in tokens_a:
-    tokens.append(token)
+  input_mask.append(1)
+  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4:
+    for token in tokens_a:
+      tokens.append(token)
+      segment_ids.append(0)
+      input_mask.append(1)
+    tokens.append("[SEP]")
     segment_ids.append(0)
-  tokens.append("[SEP]")
-  segment_ids.append(0)
+    input_mask.append(1)
 
-  if tokens_b:
+    while len(tokens) < max_seq_length/2-1:
+      tokens.append(0)
+      segment_ids.append(0)
+      input_mask.append(0)
+
     for token in tokens_b:
       tokens.append(token)
       segment_ids.append(1)
+      input_mask.append(1)
     tokens.append("[SEP]")
     segment_ids.append(1)
+    input_mask.append(1)
+
+    while len(tokens) < max_seq_length:
+      tokens.append(0)
+      segment_ids.append(0)
+      input_mask.append(0)
+  else:
+    for token in tokens_a:
+      tokens.append(token)
+      segment_ids.append(0)
+      input_mask.append(1)
+    tokens.append("[SEP]")
+    segment_ids.append(0)
+    input_mask.append(1)
+
+    if tokens_b:
+      for token in tokens_b:
+        tokens.append(token)
+        segment_ids.append(1)
+        input_mask.append(1)
+      tokens.append("[SEP]")
+      segment_ids.append(1)
+      input_mask.append(1)
 
   input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
   # The mask has 1 for real tokens and 0 for padding tokens. Only real
   # tokens are attended to.
-  input_mask = [1] * len(input_ids)
+  #input_mask = [1] * len(input_ids)
 
   # Zero-pad up to the sequence length.
   while len(input_ids) < max_seq_length:
@@ -1184,6 +1226,19 @@ def main(_):
         FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+
+  train_examples = None
+  num_train_steps = None
+  num_warmup_steps = None
+  if FLAGS.do_train or FLAGS.do_train_and_eval:
+    train_examples = processor.get_train_examples(FLAGS.data_dir)
+    num_train_steps = int(
+        len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
+    num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
+
+  if FLAGS.do_train or FLAGS.do_train_and_eval:
+      FLAGS.iterations_per_loop = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
+      FLAGS.save_checkpoints_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
@@ -1194,15 +1249,6 @@ def main(_):
           num_shards=FLAGS.num_tpu_cores,
           # num_cores_per_replica=4,
           per_host_input_for_training=is_per_host))
-
-  train_examples = None
-  num_train_steps = None
-  num_warmup_steps = None
-  if FLAGS.do_train or FLAGS.do_train_and_eval:
-    train_examples = processor.get_train_examples(FLAGS.data_dir)
-    num_train_steps = int(
-        len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
-    num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
   model_fn = model_fn_builder(
       bert_config=bert_config,
@@ -1277,8 +1323,17 @@ def main(_):
         drop_remainder=eval_drop_remainder)   
 
     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=eval_steps)
-    result = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
-    print(result)
+    current_step = 0
+    epoch = 0
+    # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+    while current_step < num_train_steps:
+      next_checkpoint = min(current_step + int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), num_train_steps)
+      estimator.train(input_fn=train_input_fn, max_steps=next_checkpoint)
+      current_step = next_checkpoint
+      epoch += 1
+      if(epoch > 2):
+        eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        print("Eval Accuracy at %d = %f"%(epoch, eval_results['eval_accuracy']))
 
   if FLAGS.do_train:
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
@@ -1339,7 +1394,7 @@ def main(_):
         hooks = [tf_debug.LocalCLIDebugHook()]
     else:
         hooks = []
-    result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps, hooks=hooks)
+    result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps, hooks=hooks, checkpoint_path=FLAGS.output_dir+'/model.ckpt')
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     for key in sorted(result.keys()):
@@ -1386,13 +1441,16 @@ def main(_):
     with tf.gfile.GFile(output_predict_file, "w") as writer:
       num_written_lines = 0
       tf.logging.info("***** Predict results *****")
+      writer.write("index\tprediction\n")
       for (i, prediction) in enumerate(result):
         probabilities = prediction["probabilities"]
         if i >= num_actual_predict_examples:
           break
-        output_line = "\t".join(
-            str(class_probability)
-            for class_probability in probabilities) + "\n"
+        pred_label = label_list[int(np.argmax(probabilities))]
+        output_line = "\t".join([str(i), pred_label])
+        #output_line = "\t".join(
+        #    str(class_probability)
+        #    for class_probability in probabilities) + "\n"
         writer.write(output_line)
         num_written_lines += 1
     assert num_written_lines == num_actual_predict_examples

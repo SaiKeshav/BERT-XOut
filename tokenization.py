@@ -137,7 +137,10 @@ def convert_by_vocab(vocab, items):
   """Converts a sequence of [tokens|ids] using the vocab."""
   output = []
   for item in items:
-    output.append(vocab[item])
+    if(item == 0):
+      output.append(0)
+    else:
+      output.append(vocab[item])
   return output
 
 
