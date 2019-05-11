@@ -28,6 +28,7 @@ import tensorflow as tf
 from wurlitzer import pipes
 from tensorflow.python import debug as tf_debug
 import pdb
+import sys
 import math
 import numpy as np
 
@@ -716,7 +717,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
       if len(tokens_a) > max_seq_length / 2 - 2:
           tokens_a = tokens_a[0:int(max_seq_length/2 -2)]
       if len(tokens_b) > max_seq_length / 2 - 1:
-          tokens_b = tokens_a[0:int(max_seq_length/2 -1)]
+          tokens_b = tokens_b[0:int(max_seq_length/2 -1)]
   else:
       if tokens_b:
         # Modifies `tokens_a` and `tokens_b` in place so that the total
@@ -761,7 +762,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     segment_ids.append(0)
     input_mask.append(1)
 
-    while len(tokens) < max_seq_length/2-1:
+    while len(tokens) < max_seq_length/2:
       tokens.append(0)
       segment_ids.append(0)
       input_mask.append(0)
