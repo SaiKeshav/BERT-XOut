@@ -606,15 +606,15 @@ def pool(tensor, axis, pool_type):
     assert axis==1
     N = get_shape_list(tensor)[axis]
     s1_max = tf.reduce_max(tensor[:,1:int(N/2),:], axis=axis)
-    s2_max = tf.reduce_max(tensor[:,int(N/2+1):,:], axis=axis)
+    s2_max = tf.reduce_max(tensor[:,int(N/2)+1:,:], axis=axis)
     s12_diff = tf.abs(s1_max - s2_max)
     s12_mul = s1_max * s2_max
     return tf.concat([s1_max, s2_max, s12_diff, s12_mul], -1)
   elif(pool_type == 4): # nli-xout
     assert axis==1
     N = get_shape_list(tensor)[axis]
-    s1_xmax = xmax(tensor[:,1:int(N/2),:], axis=axis)
-    s2_xmax = xmax(tensor[:,int(N/2+1):,:], axis=axis)
+    s1_xmax = xmax(tensor[:,1:int(N/2)-1,:], axis=axis)
+    s2_xmax = xmax(tensor[:,int(N/2):-1,:], axis=axis)
     s12_diff = tf.abs(s1_xmax - s2_xmax)
     s12_mul = s1_xmax * s2_xmax
     return tf.concat([s1_xmax, s2_xmax, s12_diff, s12_mul], -1)

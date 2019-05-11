@@ -1236,14 +1236,15 @@ def main(_):
         len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
-  if FLAGS.do_train or FLAGS.do_train_and_eval:
-      FLAGS.iterations_per_loop = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
+  if FLAGS.do_train_and_eval:
+      FLAGS.iterations_per_loop = min(int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), FLAGS.iterations_per_loop)
       FLAGS.save_checkpoints_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
       model_dir=FLAGS.output_dir,
       save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+      keep_checkpoint_max=100,
       tpu_config=tf.contrib.tpu.TPUConfig(
           iterations_per_loop=FLAGS.iterations_per_loop,
           num_shards=FLAGS.num_tpu_cores,
@@ -1325,11 +1326,14 @@ def main(_):
     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=eval_steps)
     current_step = 0
     epoch = 0
-    # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+    #estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
     while current_step < num_train_steps:
       next_checkpoint = min(current_step + int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), num_train_steps)
       estimator.train(input_fn=train_input_fn, max_steps=next_checkpoint)
       current_step = next_checkpoint
+      with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint", "w") as writer:
+        s = "model_checkpoint_path: \"model.ckpt-%d\"\n"%next_checkpoint 
+        writer.write(s)
       epoch += 1
       if(epoch > 2):
         eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
