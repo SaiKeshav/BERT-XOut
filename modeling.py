@@ -28,6 +28,7 @@ import six
 import tensorflow as tf
 import os
 import sys
+import pdb
 
 att_type = None
 pool_type = None
@@ -35,6 +36,9 @@ heads = None
 middle_dim = None
 final_dim = None
 exp = None
+
+def swish(x):
+  return tf.keras.backend.sigmoid(x) * x
 
 class BertConfig(object):
   """Configuration for `BertModel`."""
@@ -224,31 +228,25 @@ class BertModel(object):
             initializer_range=config.initializer_range,
             do_return_all_layers=True)
 
-      self.sequence_output = self.all_encoder_layers[-1]
-      self.penulti_output = self.all_encoder_layers[-2]
       
       # The "pooler" converts the encoded sequence tensor of shape
       # [batch_size, seq_length, hidden_size] to a tensor of shape
       # [batch_size, hidden_size]. This is necessary for segment-level
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
-      with tf.variable_scope("pooler"):
-        if(exp == 4):
-          self.pooled_output = pool(self.penulti_output, 1, pool_type)
-        elif(pool_type != 0 or heads != 0):
-          self.pooled_output = tf.layers.dense(self.sequence_output,
-                  config.hidden_size,
-                  activation=tf.tanh,
-                  kernel_initializer=create_initializer(config.initializer_range))
-          self.sequence_output = self.pooled_output
-          embs = [pool(self.sequence_output, 1, pool_type)]
-          for i in range(heads):
-            out = tf.layers.dense(self.sequence_output, middle_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
-            out = self.swish(out)
-            out = tf.layers.dense(out, final_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
-            embs.append(pool(out, 1, pool_type))  
-          self.pooled_output = tf.concat(embs, 1)
+      with tf.variable_scope("pooler", reuse=tf.AUTO_REUSE):
+        if(pool_type != 0):
+          if(exp == 4):
+            for i in range(len(self.all_encoder_layers)):
+              self.all_encoder_layers[i] = tf.expand_dims(self.all_encoder_layers[i], 2)
+            all_vec = tf.concat(self.all_encoder_layers[12:], 2)
+            self.sequence_output = tf.reduce_max(all_vec, 2)
+            #self.sequence_output = self.all_encoder_layers[-2]
+          else:
+            self.sequence_output = self.all_encoder_layers[-1]
+          self.pooled_output = pool(self.sequence_output, 1, pool_type, config)
         else:
+          self.sequence_output = self.all_encoder_layers[-1]
           # We "pool" the model by simply taking the hidden state corresponding
           # to the first token. We assume that this has been pre-trained
           first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
@@ -258,8 +256,6 @@ class BertModel(object):
               activation=tf.tanh,
               kernel_initializer=create_initializer(config.initializer_range))
 
-  def swish(self, x):
-    return tf.keras.backend.sigmoid(x) * x
 
   def get_pooled_output(self):
     return self.pooled_output
@@ -593,31 +589,85 @@ def xmax(tensor, axis):
     teq = tf.equal(t_max, tf.maximum(t_max, t_amax))
     return tf.where(teq, t_max, t_min)
 
-def pool(tensor, axis, pool_type):
+def pool(tensor, axis, pool_type, config):
+  assert axis==1
   if(pool_type == 1): # Maxout
-    return tf.reduce_max(tensor, axis=axis)
+    t_max = tf.reduce_max(tensor[:,1:,:], axis=axis)
+    dense_max = tf.layers.dense(t_max,
+            config.hidden_size,
+            activation=tf.tanh,
+            kernel_initializer=create_initializer(config.initializer_range), name='dense')
+    return dense_max
   elif(pool_type == 2): # xout
-    t_max = tf.reduce_max(tensor, axis=axis)
-    t_min = tf.reduce_min(tensor, axis=axis)
-    t_amax = tf.reduce_max(tf.abs(tensor), axis=axis)
+    t_max = tf.reduce_max(tensor[:,1:,:], axis=axis)
+    t_min = tf.reduce_min(tensor[:,1:,:], axis=axis)
+    t_amax = tf.reduce_max(tf.abs(tensor[:,1:,:]), axis=axis)
     teq = tf.equal(t_max, tf.maximum(t_max, t_amax))
     return tf.where(teq, t_max, t_min)
   elif(pool_type == 3): # nli-maxout
-    assert axis==1
     N = get_shape_list(tensor)[axis]
     s1_max = tf.reduce_max(tensor[:,1:int(N/2),:], axis=axis)
     s2_max = tf.reduce_max(tensor[:,int(N/2):,:], axis=axis)
-    s12_diff = tf.abs(s1_max - s2_max)
-    s12_mul = s1_max * s2_max
-    return tf.concat([s1_max, s2_max, s12_diff, s12_mul], -1)
+    d1_max = tf.layers.dense(s1_max,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense')
+    d2_max = tf.layers.dense(s2_max,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense', reuse=True)
+
+    d12_diff = tf.abs(d1_max - d2_max)
+    d12_mul = d1_max * d2_max
+    return tf.concat([d1_max, d2_max, d12_diff, d12_mul], -1)
   elif(pool_type == 4): # nli-xout
-    assert axis==1
     N = get_shape_list(tensor)[axis]
     s1_xmax = xmax(tensor[:,1:int(N/2)-1,:], axis=axis)
     s2_xmax = xmax(tensor[:,int(N/2):-1,:], axis=axis)
     s12_diff = tf.abs(s1_xmax - s2_xmax)
     s12_mul = s1_xmax * s2_xmax
     return tf.concat([s1_xmax, s2_xmax, s12_diff, s12_mul], -1)
+  elif(pool_type == 5): # nli-maxout with heads
+    N = get_shape_list(tensor)[axis]
+    t1 = tensor[:, 1:int(N/2), :]
+    t2 = tensor[:, int(N/2):, :]
+    s1_max = tf.reduce_max(t1, axis=axis)
+    s2_max = tf.reduce_max(t2, axis=axis)
+    d1_max = tf.layers.dense(s1_max,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense')
+    d2_max = tf.layers.dense(s2_max,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense', reuse=True)
+    embs1 = [d1_max]
+    embs2 = [d2_max]
+    dt1 = tf.layers.dense(t1,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense', reuse=True)
+    dt2 = tf.layers.dense(t2,
+        config.hidden_size,
+        activation=tf.tanh,
+        kernel_initializer=create_initializer(config.initializer_range), name='dense', reuse=True)
+    for i in range(heads):
+      #out1 = tf.layers.dense(dt1, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i))
+      #out1 = swish(out1)
+      out1 = tf.layers.dense(dt1, final_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i))
+      out1 = swish(out1)
+      embs1.append(tf.reduce_max(out1, axis))
+
+      #out2 = tf.layers.dense(dt2, middle_dim, activation=tf.tanh, kernel_initializer=create_initializer(config.initializer_range), name='mh0_'+str(i), reuse=True)
+      #out2 = swish(out2)
+      out2 = tf.layers.dense(dt2, final_dim, kernel_initializer=create_initializer(config.initializer_range), name='mh1_'+str(i), reuse=True)
+      out2 = swish(out2)
+      embs2.append(tf.reduce_max(out2, axis))  
+    s1 = tf.concat(embs1, 1)
+    s2 = tf.concat(embs2, 1)
+    s12_diff = tf.abs(s1 - s2)
+    s12_mul = s1*s2
+    return tf.concat([s1, s2, s12_diff, s12_mul], -1)
 
 def attention_layer(from_tensor,
                     to_tensor,
@@ -985,23 +1035,23 @@ def transformer_model(input_tensor,
     final_outputs = []
     for layer_num, layer_output in enumerate(all_layer_outputs):
       final_output = reshape_from_matrix(layer_output, input_shape)
-      if(exp == 2 and layer_num == len(all_layer_outputs) - 1 and att_type > 0):
+      if(exp == 2 and layer_num == len(all_layer_outputs) - 1):
         # attention_scores: [B, N, F, T]
-        # [B, N, T]
-        head_mean = tf.reduce_mean(attention_probs, 2, name='head_mean')
-        # [B, 1, T]
-        # token_mean = tf.reduce_mean(head_mean, 1, keepdims=True, name='token_mean')
-        token_sum = tf.reduce_sum(head_mean, 1, keepdims=True, name='token_sum')
-        nonzeros = tf.count_nonzero(head_mean, 1, keepdims=True, name='token_nz')
-        nonzeros = tf.cast(nonzeros, tf.float32)
-        nonzeros += 1 # Just for safety
-        token_mean = tf.div(token_sum, nonzeros, name='token_mean')
+        # [B, F, T]
+        head_mean = tf.reduce_mean(attention_probs, 1, name='head_mean')
+        # [B, F]
+        token_imp = head_mean[:,:,0]
+        final_output = final_output * tf.expand_dims(token_imp, -1)
+        #token_sum = tf.reduce_sum(head_mean, 1, keepdims=True, name='token_sum')
+        # [B, F, 1]
+        #nonzeros = tf.count_nonzero(head_mean, 1, keepdims=True, name='token_nz')
+        #nonzeros = tf.cast(nonzeros, tf.float32)
+        #nonzeros += 1 # Just for safety
+        #token_mean = tf.div(token_sum, nonzeros, name='token_mean')
 
-        token_mean = tf.nn.relu(token_mean, name='token_mean_relu')
+        #token_mean = tf.nn.relu(token_mean, name='token_mean_relu')
         # [B, T, H]
-        final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
-      if((exp == 2 or exp == 3) and layer_num == len(all_layer_outputs) - 1 and att_type > 0):
-        final_output = final_output[:, :-1]
+        #final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
       final_outputs.append(final_output)
     return final_outputs
   else:

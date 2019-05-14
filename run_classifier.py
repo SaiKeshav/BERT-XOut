@@ -716,7 +716,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   if FLAGS.pool_type == 3 or FLAGS.pool_type == 4:
       if len(tokens_a) > max_seq_length / 2 - 2:
           tokens_a = tokens_a[0:int(max_seq_length/2 -2)]
-      if len(tokens_b) > max_seq_length / 2 - 1:
+      if tokens_b != None and len(tokens_b) > max_seq_length / 2 - 1:
           tokens_b = tokens_b[0:int(max_seq_length/2 -1)]
   else:
       if tokens_b:
@@ -762,18 +762,19 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     segment_ids.append(0)
     input_mask.append(1)
 
-    while len(tokens) < max_seq_length/2:
-      tokens.append(0)
-      segment_ids.append(0)
-      input_mask.append(0)
+    if(tokens_b):
+        while len(tokens) < max_seq_length/2:
+          tokens.append(0)
+          segment_ids.append(0)
+          input_mask.append(0)
 
-    for token in tokens_b:
-      tokens.append(token)
-      segment_ids.append(1)
-      input_mask.append(1)
-    tokens.append("[SEP]")
-    segment_ids.append(1)
-    input_mask.append(1)
+        for token in tokens_b:
+          tokens.append(token)
+          segment_ids.append(1)
+          input_mask.append(1)
+        tokens.append("[SEP]")
+        segment_ids.append(1)
+        input_mask.append(1)
 
     while len(tokens) < max_seq_length:
       tokens.append(0)
@@ -1244,8 +1245,8 @@ def main(_):
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
       model_dir=FLAGS.output_dir,
-      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
       keep_checkpoint_max=100,
+      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
       tpu_config=tf.contrib.tpu.TPUConfig(
           iterations_per_loop=FLAGS.iterations_per_loop,
           num_shards=FLAGS.num_tpu_cores,
@@ -1332,9 +1333,9 @@ def main(_):
       next_checkpoint = min(current_step + int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), num_train_steps)
       estimator.train(input_fn=train_input_fn, max_steps=next_checkpoint)
       current_step = next_checkpoint
-      with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint", "w") as writer:
-        s = "model_checkpoint_path: \"model.ckpt-%d\"\n"%next_checkpoint 
-        writer.write(s)
+      #with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint", "w") as writer:
+        #s = "model_checkpoint_path: \"model.ckpt-%d\"\n"%next_checkpoint 
+        #writer.write(s)
       epoch += 1
       if(epoch > 2):
         eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
@@ -1456,7 +1457,7 @@ def main(_):
         #output_line = "\t".join(
         #    str(class_probability)
         #    for class_probability in probabilities) + "\n"
-        writer.write(output_line)
+        writer.write(output_line+"\n")
         num_written_lines += 1
     assert num_written_lines == num_actual_predict_examples
 
