@@ -864,19 +864,20 @@ def attention_layer(from_tensor,
     # T
     num_tokens = get_shape_list(value_layer)[2]
     # [B, N, 1, T, H]
-    exp_value_layer = tf.expand_dims(value_layer, -2)
-    multiply = tf.constant([1,1,1,num_tokens,1])
+    exp_value_layer = tf.expand_dims(value_layer, 2)
+    multiply = tf.constant([1,1,num_tokens,1,1])
     # [B, N, T, T, H]
     exp_value_layer = tf.tile(exp_value_layer, multiply)
-    attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
-    # [B, N, T, T]
-    attention_scores = attention_scores * attention_mask 
+    #attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
+    # [B, N, F, T]
+    #attention_scores = attention_scores * attention_mask 
     # [B, N, F, T, 1]
-    attention_scores = tf.expand_dims(attention_scores, -1)
+    attention_scores = tf.expand_dims(attention_probs, -1)
     # [B, N, F, T, H]
     attended_value_layer = attention_scores * exp_value_layer
     # [B, N, F, H]
-    context_layer = pool(attended_value_layer, 3, att_type)
+    # context_layer = pool(attended_value_layer, 3, att_type)
+    context_layer = tf.reduce_max(attended_value_layer, 3)
   else:
     # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
@@ -1040,7 +1041,7 @@ def transformer_model(input_tensor,
         # [B, F, T]
         head_mean = tf.reduce_mean(attention_probs, 1, name='head_mean')
         # [B, F]
-        token_imp = head_mean[:,:,0]
+        token_imp = head_mean[:,0,:]
         final_output = final_output * tf.expand_dims(token_imp, -1)
         #token_sum = tf.reduce_sum(head_mean, 1, keepdims=True, name='token_sum')
         # [B, F, 1]
