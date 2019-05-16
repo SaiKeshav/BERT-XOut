@@ -22,6 +22,7 @@ import codecs
 import collections
 import json
 import re
+import pdb
 
 import modeling
 import tokenization
@@ -42,6 +43,12 @@ flags.DEFINE_string(
     "bert_config_file", None,
     "The config json file corresponding to the pre-trained BERT model. "
     "This specifies the model architecture.")
+
+tf.flags.DEFINE_string(
+    "tpu_name", None,
+    "The Cloud TPU to use for training. This should be either the name "
+    "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
+    "url.")
 
 flags.DEFINE_integer(
     "max_seq_length", 128,
@@ -193,6 +200,7 @@ def model_fn_builder(bert_config, init_checkpoint, layer_indexes, use_tpu,
                       init_string)
 
     all_layers = model.get_all_encoder_layers()
+    imp_scores = model.get_imp_scores()
 
     predictions = {
         "unique_id": unique_ids,
@@ -200,6 +208,7 @@ def model_fn_builder(bert_config, init_checkpoint, layer_indexes, use_tpu,
 
     for (i, layer_index) in enumerate(layer_indexes):
       predictions["layer_output_%d" % i] = all_layers[layer_index]
+    predictions["imp_scores"] = imp_scores
 
     output_spec = tf.contrib.tpu.TPUEstimatorSpec(
         mode=mode, predictions=predictions, scaffold_fn=scaffold_fn)
@@ -342,6 +351,7 @@ def read_examples(input_file):
 
 
 def main(_):
+  modeling.get_imp = True
   tf.logging.set_verbosity(tf.logging.INFO)
 
   layer_indexes = [int(x) for x in FLAGS.layers.split(",")]
@@ -351,9 +361,15 @@ def main(_):
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
+  tpu_cluster_resolver = None
+  if FLAGS.use_tpu and FLAGS.tpu_name:
+    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+        FLAGS.tpu_name, None, project=None)
+
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
   run_config = tf.contrib.tpu.RunConfig(
-      master=FLAGS.master,
+      cluster=tpu_cluster_resolver,
+      #master=FLAGS.master,
       tpu_config=tf.contrib.tpu.TPUConfig(
           num_shards=FLAGS.num_tpu_cores,
           per_host_input_for_training=is_per_host))
@@ -379,6 +395,7 @@ def main(_):
   estimator = tf.contrib.tpu.TPUEstimator(
       use_tpu=FLAGS.use_tpu,
       model_fn=model_fn,
+      train_batch_size=32,
       config=run_config,
       predict_batch_size=FLAGS.batch_size)
 
@@ -389,6 +406,7 @@ def main(_):
                                                "w")) as writer:
     for result in estimator.predict(input_fn, yield_single_examples=True):
       unique_id = int(result["unique_id"])
+      imp_scores = result['imp_scores']
       feature = unique_id_to_feature[unique_id]
       output_json = collections.OrderedDict()
       output_json["linex_index"] = unique_id
@@ -408,6 +426,9 @@ def main(_):
         features["layers"] = all_layers
         all_features.append(features)
       output_json["features"] = all_features
+      output_json["tokens"] = feature.tokens
+      num_tokens = len(feature.tokens)
+      output_json["imp_scores"] = [round(float(x), 3) for x in imp_scores.flat][:num_tokens]
       writer.write(json.dumps(output_json) + "\n")
 
 

@@ -36,6 +36,7 @@ heads = None
 middle_dim = None
 final_dim = None
 exp = None
+get_imp = False
 
 def swish(x):
   return tf.keras.backend.sigmoid(x) * x
@@ -215,7 +216,7 @@ class BertModel(object):
 
         # Run the stacked transformer.
         # `sequence_output` shape = [batch_size, seq_length, hidden_size].
-        self.all_encoder_layers = transformer_model(
+        self.all_encoder_layers, self.imp_scores = transformer_model(
             input_tensor=self.embedding_output,
             attention_mask=attention_mask,
             hidden_size=config.hidden_size,
@@ -244,7 +245,10 @@ class BertModel(object):
             #self.sequence_output = self.all_encoder_layers[-2]
           else:
             self.sequence_output = self.all_encoder_layers[-1]
-          self.pooled_output = pool(self.sequence_output, 1, pool_type, config)
+          if(exp == 5):
+            self.pooled_output = tf.concat([pool(self.sequence_output, 1, pool_type, config), self.all_encoder_layers[-1][:,0,:]], axis=-1)
+          else:
+            self.pooled_output = pool(self.sequence_output, 1, pool_type, config)
         else:
           self.sequence_output = self.all_encoder_layers[-1]
           # We "pool" the model by simply taking the hidden state corresponding
@@ -271,6 +275,9 @@ class BertModel(object):
 
   def get_all_encoder_layers(self):
     return self.all_encoder_layers
+
+  def get_imp_scores(self):
+    return self.imp_scores
 
   def get_embedding_output(self):
     """Gets output of the embedding lookup (i.e., input to the transformer).
@@ -617,9 +624,10 @@ def pool(tensor, axis, pool_type, config):
         activation=tf.tanh,
         kernel_initializer=create_initializer(config.initializer_range), name='dense', reuse=True)
 
-    d12_diff = tf.abs(d1_max - d2_max)
-    d12_mul = d1_max * d2_max
-    return tf.concat([d1_max, d2_max, d12_diff, d12_mul], -1)
+    #d12_diff = tf.abs(d1_max - d2_max)
+    #d12_mul = d1_max * d2_max
+    #return tf.concat([d1_max, d2_max, d12_diff, d12_mul], -1)
+    return tf.concat([d1_max, d2_max], -1)
   elif(pool_type == 4): # nli-xout
     N = get_shape_list(tensor)[axis]
     s1_xmax = xmax(tensor[:,1:int(N/2)-1,:], axis=axis)
@@ -870,14 +878,14 @@ def attention_layer(from_tensor,
     exp_value_layer = tf.tile(exp_value_layer, multiply)
     #attention_scores = dropout(attention_scores, attention_probs_dropout_prob)
     # [B, N, F, T]
-    #attention_scores = attention_scores * attention_mask 
+    attention_scores = attention_scores * attention_mask 
     # [B, N, F, T, 1]
-    attention_scores = tf.expand_dims(attention_probs, -1)
+    attention_scores = tf.expand_dims(attention_scores, -1)
     # [B, N, F, T, H]
     attended_value_layer = attention_scores * exp_value_layer
     # [B, N, F, H]
     # context_layer = pool(attended_value_layer, 3, att_type)
-    context_layer = tf.reduce_max(attended_value_layer, 3)
+    context_layer = tf.reduce_max(exp_value_layer, 3)
   else:
     # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
@@ -1031,7 +1039,12 @@ def transformer_model(input_tensor,
         prev_output = layer_output
         all_layer_outputs.append(layer_output)
 
-  global att_type, exp
+  global att_type, exp, get_imp 
+  imp_scores = None
+  if(get_imp == True):
+    head_mean = tf.reduce_mean(attention_probs, 1, name='head_mean')
+    imp_scores = head_mean[:,0,:]
+
   if do_return_all_layers:
     final_outputs = []
     for layer_num, layer_output in enumerate(all_layer_outputs):
@@ -1054,10 +1067,10 @@ def transformer_model(input_tensor,
         # [B, T, H]
         #final_output = final_output * tf.transpose(token_mean, [0, 2, 1])
       final_outputs.append(final_output)
-    return final_outputs
+    return final_outputs, imp_scores
   else:
     final_output = reshape_from_matrix(prev_output, input_shape)
-    return final_output
+    return final_output, imp_scores
 
 def reduce_nonzero_mean(t, dim, name):
     full_sum = tf.reduce_sum(t, dim, name=name+"_sum")

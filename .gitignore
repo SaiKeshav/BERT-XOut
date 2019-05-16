@@ -119,3 +119,4 @@ glue_data/
 download_glue_data/
 *.tsv
 results*
+extractions/

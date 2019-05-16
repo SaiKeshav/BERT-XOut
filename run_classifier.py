@@ -483,8 +483,8 @@ class QQPProcessor(DataProcessor):
         continue
       guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
       if set_type == "test":
-        text_a = tokenization.convert_to_unicode(line[0])
-        text_b = tokenization.convert_to_unicode(line[1])
+        text_a = tokenization.convert_to_unicode(line[1])
+        text_b = tokenization.convert_to_unicode(line[2])
         label = "0"
       else:
         text_a = tokenization.convert_to_unicode(line[3])
@@ -684,7 +684,7 @@ class SSTProcessor(DataProcessor):
         continue
       guid = "%s-%s" % (set_type, i)
       if set_type == "test":
-        text_a = tokenization.convert_to_unicode(line[0])
+        text_a = tokenization.convert_to_unicode(line[1])
         label = "0"
       else:
         text_a = tokenization.convert_to_unicode(line[0])
@@ -715,7 +715,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   if example.text_b:
     tokens_b = tokenizer.tokenize(example.text_b)
 
-  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4:
+  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4 or FLAGS.pool_type == 5:
       if len(tokens_a) > max_seq_length / 2 - 2:
           tokens_a = tokens_a[0:int(max_seq_length/2 -2)]
       if tokens_b != None and len(tokens_b) > max_seq_length / 2 - 1:
@@ -755,7 +755,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   tokens.append("[CLS]")
   segment_ids.append(0)
   input_mask.append(1)
-  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4:
+  if FLAGS.pool_type == 3 or FLAGS.pool_type == 4 or FLAGS.pool_type == 5:
     for token in tokens_a:
       tokens.append(token)
       segment_ids.append(0)
@@ -1405,8 +1405,6 @@ def main(_):
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps, hooks=hooks)
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
-    for key in sorted(result.keys()):
-      os.environ[str(key)] = str(result[key])
 
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
