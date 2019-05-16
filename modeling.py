@@ -673,9 +673,10 @@ def pool(tensor, axis, pool_type, config):
       embs2.append(tf.reduce_max(out2, axis))  
     s1 = tf.concat(embs1, 1)
     s2 = tf.concat(embs2, 1)
-    s12_diff = tf.abs(s1 - s2)
-    s12_mul = s1*s2
-    return tf.concat([s1, s2, s12_diff, s12_mul], -1)
+    #s12_diff = tf.abs(s1 - s2)
+    #s12_mul = s1*s2
+    #return tf.concat([s1, s2, s12_diff, s12_mul], -1)
+    return tf.concat([s1, s2], -1)
 
 def attention_layer(from_tensor,
                     to_tensor,
