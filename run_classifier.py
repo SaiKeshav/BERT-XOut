@@ -56,6 +56,9 @@ flags.DEFINE_string(
     "output_dir", None,
     "The output directory where the model checkpoints will be written.")
 
+flags.DEFINE_string(
+    "ckpt", None,
+    "The checkpoint to use for evaluating the model.")
 ## Other parameters
 
 flags.DEFINE_string(
@@ -1240,7 +1243,7 @@ def main(_):
         len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
-  if FLAGS.do_train_and_eval:
+  if FLAGS.do_train_and_eval or FLAGS.do_train:
       FLAGS.iterations_per_loop = min(int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), FLAGS.iterations_per_loop)
       FLAGS.save_checkpoints_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
   run_config = tf.contrib.tpu.RunConfig(
@@ -1328,20 +1331,27 @@ def main(_):
         drop_remainder=eval_drop_remainder)   
 
     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=eval_steps)
-    current_step = 0
-    epoch = 0
+    epoch_steps = int(math.ceil(len(train_examples) / FLAGS.train_batch_size))
+    epoch = 3
+    next_checkpoint = epoch_steps*epoch
+    current_step = next_checkpoint
+    assert current_step < num_train_steps, "No training will take place"
     #estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
     while current_step < num_train_steps:
-      next_checkpoint = min(current_step + int(math.ceil(len(train_examples) / FLAGS.train_batch_size)), num_train_steps)
       estimator.train(input_fn=train_input_fn, max_steps=next_checkpoint)
+      next_checkpoint = min(current_step + epoch_steps, num_train_steps)
       current_step = next_checkpoint
-      #with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint", "w") as writer:
-        #s = "model_checkpoint_path: \"model.ckpt-%d\"\n"%next_checkpoint 
-        #writer.write(s)
+      eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+      result_string = "Eval Accuracy at %d = %f"%(epoch, eval_results['eval_accuracy'])
+      print(result_string)
+      if(epoch == 3):
+        with tf.gfile.GFile(FLAGS.output_dir+"/epoch_acc.json", "w") as writer:
+          writer.write(result_string+"\n")
+      else:
+        with tf.gfile.GFile(FLAGS.output_dir+"/epoch_acc.json", "a") as writer:
+          writer.write(result_string+"\n")
+
       epoch += 1
-      if(epoch > 2):
-        eval_results = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-        print("Eval Accuracy at %d = %f"%(epoch, eval_results['eval_accuracy']))
 
   if FLAGS.do_train:
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
@@ -1402,7 +1412,18 @@ def main(_):
         hooks = [tf_debug.LocalCLIDebugHook()]
     else:
         hooks = []
+
+    if(FLAGS.ckpt != ""):
+	with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint","w") as writer:
+	    s = "model_checkpoint_path: \"%s\"\n"%FLAGS.ckpt
+	    writer.write(s)
+
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps, hooks=hooks)
+
+    if(FLAGS.ckpt != ""):
+	with tf.gfile.GFile(FLAGS.output_dir+"/a_"+FLAGS.ckpt+"_"+'%0.2f'%(result['eval_accuracy']*100),"w") as writer:
+	    s = "model_checkpoint_path: \"%s\"\n"%FLAGS.ckpt
+	    writer.write(s)
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
 
@@ -1440,6 +1461,11 @@ def main(_):
         seq_length=FLAGS.max_seq_length,
         is_training=False,
         drop_remainder=predict_drop_remainder)
+
+    if(FLAGS.ckpt != ""):
+	with tf.gfile.GFile(FLAGS.output_dir+"/checkpoint","w") as writer:
+	    s = "model_checkpoint_path: \"%s\"\n"%FLAGS.ckpt
+	    writer.write(s)
 
     result = estimator.predict(input_fn=predict_input_fn)
 

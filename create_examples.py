@@ -1,5 +1,7 @@
+import csv
+
 if 1==1:
-    inp_file = open('test.tsv')
+    inp_file = open('glue_data/SST-2/test.tsv')
     rows = csv.reader(inp_file, delimiter='\t')
     out_file = open('test_examples','w')
     for i,row in enumerate(rows):
